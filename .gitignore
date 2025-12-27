@@ -2,6 +2,19 @@
 /dist
 /node_modules
 /build
+*.tsbuildinfo
+
+# Apps node_modules
+apps/*/node_modules
+apps/*/dist
+apps/*/build
+apps/*/.next
+apps/*/.turbo
+apps/*/out
+
+# Shared packages
+shared/*/node_modules
+shared/*/dist
 
 # Logs
 logs
@@ -14,10 +27,15 @@ lerna-debug.log*
 
 # OS
 .DS_Store
+.AppleDouble
+.LSOverride
+Thumbs.db
 
 # Tests
 /coverage
 /.nyc_output
+*.lcov
+.jest
 
 # IDEs and editors
 /.idea
@@ -27,6 +45,9 @@ lerna-debug.log*
 *.launch
 .settings/
 *.sublime-workspace
+*.swp
+*.swo
+*~
 
 # IDE - VSCode
 .vscode/*
@@ -41,6 +62,7 @@ lerna-debug.log*
 .env.test.local
 .env.production.local
 .env.local
+.env*.local
 
 # temp directory
 .temp
@@ -54,3 +76,33 @@ pids
 
 # Diagnostic reports (https://nodejs.org/api/report.html)
 report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
+
+# Cache directories
+.npm
+.eslintcache
+.cache
+.parcel-cache
+.next/cache
+
+# Build outputs
+*.js.map
+*.d.ts.map
+
+# TypeScript cache
+*.tsbuildinfo
+
+# Optional npm cache directory
+.npm
+
+# Optional REPL history
+.node_repl_history
+
+# Package manager lock files (keep package-lock.json)
+# yarn.lock
+# pnpm-lock.yaml
+
+# Production builds
+/apps/admin-dashboard/dist
+/apps/merchant-dashboard/dist
+/apps/customer-webview/.next
+/apps/customer-webview/out
