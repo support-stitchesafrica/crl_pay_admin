@@ -1,12 +1,12 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { Mail, Lock, AlertCircle, Eye, EyeOff, Store } from 'lucide-react';
+import { Store, AlertCircle, ArrowRight, Lock, TrendingUp, Zap, CreditCard } from 'lucide-react';
+import { EmailInput, PasswordInput, Button } from '../components/ui';
 
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const { login } = useAuth();
@@ -21,27 +21,32 @@ export default function Login() {
       await login(email, password);
       navigate('/');
     } catch (error: any) {
-      setError(error.response?.data?.message || 'Login failed. Please check your credentials.');
+      setError(error.response?.data?.message || 'Invalid email or password');
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-green-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        {/* Logo and Header */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-green-600 rounded-2xl mb-4 shadow-lg">
-            <Store className="w-8 h-8 text-white" />
+    <div className="min-h-screen flex">
+      {/* Left Side - Form */}
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-white">
+        <div className="w-full max-w-md">
+          {/* Logo and Header */}
+          <div className="mb-10">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-xl mb-6">
+              <Store className="w-8 h-8 text-white" />
+            </div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+              Merchant Login
+            </h1>
+            <p className="text-gray-600">
+              Access your business dashboard
+            </p>
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">CRL Pay Merchant</h1>
-          <p className="text-gray-600">Access your merchant dashboard</p>
-        </div>
 
-        {/* Login Card */}
-        <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-8">
-          <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Login Form */}
+          <form onSubmit={handleSubmit} className="space-y-5">
             {/* Error Message */}
             {error && (
               <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">
@@ -51,97 +56,107 @@ export default function Login() {
             )}
 
             {/* Email Input */}
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                Email Address
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Mail className="h-5 w-5 text-gray-400" />
-                </div>
-                <input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="merchant@example.com"
-                  className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all outline-none text-gray-900 placeholder-gray-400"
-                  required
-                  disabled={isLoading}
-                />
-              </div>
-            </div>
+            <EmailInput
+              label="Email Address"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="merchant@business.com"
+              required
+              disabled={isLoading}
+            />
 
             {/* Password Input */}
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-                Password
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Lock className="h-5 w-5 text-gray-400" />
-                </div>
-                <input
-                  id="password"
-                  type={showPassword ? 'text' : 'password'}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Enter your password"
-                  className="block w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all outline-none text-gray-900 placeholder-gray-400"
-                  required
-                  disabled={isLoading}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                  disabled={isLoading}
-                >
-                  {showPassword ? (
-                    <EyeOff className="h-5 w-5 text-gray-400 hover:text-gray-600" />
-                  ) : (
-                    <Eye className="h-5 w-5 text-gray-400 hover:text-gray-600" />
-                  )}
-                </button>
-              </div>
-            </div>
+            <PasswordInput
+              label="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Enter your password"
+              required
+              disabled={isLoading}
+            />
 
             {/* Submit Button */}
-            <button
+            <Button
               type="submit"
-              disabled={isLoading}
-              className="w-full bg-green-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-green-600/30"
+              loading={isLoading}
+              fullWidth
+              size="lg"
+              className="mt-6"
+              icon={!isLoading && <ArrowRight className="w-5 h-5" />}
             >
-              {isLoading ? (
-                <span className="flex items-center justify-center gap-2">
-                  <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Signing in...
-                </span>
-              ) : (
-                'Sign In'
-              )}
-            </button>
+              {isLoading ? 'Signing In...' : 'Sign In to Dashboard'}
+            </Button>
           </form>
 
-          {/* Footer */}
-          <div className="mt-6 text-center">
-            <p className="text-sm text-gray-500">
-              Secure merchant access
+          {/* Footer Links */}
+          <div className="mt-8 pt-6 border-t border-gray-200">
+            <p className="text-center text-sm text-gray-600">
+              New to CRL Pay?{' '}
+              <Link to="/register" className="text-blue-600 hover:text-blue-700 font-semibold">
+                Create Account
+              </Link>
             </p>
           </div>
+
+          {/* Security Badge */}
+          <div className="mt-6 flex items-center justify-center gap-2 text-gray-500 text-xs">
+            <Lock className="w-3 h-3" />
+            <span>Bank-grade security & encryption</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Right Side - Background */}
+      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-gray-900 via-gray-800 to-blue-900 p-12 items-center justify-center relative overflow-hidden">
+        {/* Animated background elements */}
+        <div className="absolute inset-0">
+          <div className="absolute top-20 right-20 w-72 h-72 bg-blue-600/20 rounded-full blur-3xl"></div>
+          <div className="absolute bottom-20 left-20 w-96 h-96 bg-white/5 rounded-full blur-3xl"></div>
+          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-blue-500/10 rounded-full blur-3xl"></div>
         </div>
 
-        {/* Helper Text */}
-        <div className="mt-6 text-center">
-          <p className="text-xs text-gray-500">
-            Don't have an account?{' '}
-            <a href="/register" className="text-green-600 hover:text-green-700 font-medium">
-              Register your business
-            </a>
-          </p>
+        {/* Content */}
+        <div className="relative z-10 text-white max-w-lg">
+          <div className="mb-8">
+            <Store className="w-16 h-16 mb-6 opacity-90" />
+            <h2 className="text-4xl font-bold mb-4 leading-tight">
+              Grow Your Business with BNPL
+            </h2>
+            <p className="text-gray-300 text-lg leading-relaxed">
+              Accept Buy Now, Pay Later payments and increase your sales. Let your customers shop now and pay in installments.
+            </p>
+          </div>
+
+          {/* Feature List */}
+          <div className="space-y-4 mt-12">
+            <div className="flex items-start gap-4">
+              <div className="w-10 h-10 bg-white/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                <TrendingUp className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-semibold mb-1">Increase Sales</h3>
+                <p className="text-gray-300 text-sm">Boost revenue by up to 30% with flexible payment options</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-4">
+              <div className="w-10 h-10 bg-white/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                <Zap className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-semibold mb-1">Instant Settlements</h3>
+                <p className="text-gray-300 text-sm">Get paid upfront while customers pay over time</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-4">
+              <div className="w-10 h-10 bg-white/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                <CreditCard className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-semibold mb-1">No Risk for You</h3>
+                <p className="text-gray-300 text-sm">We handle all credit risk and collections</p>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>

@@ -63,7 +63,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 py-4">
+        <nav className="flex-1 py-6 space-y-2">
           {menuItems.map((item) => {
             const Icon = item.icon;
             const isActive = location.pathname === item.path;
@@ -72,7 +72,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               <Link
                 key={item.path}
                 to={item.path}
-                className={`flex items-center px-4 py-3 hover:bg-green-800 transition-colors ${
+                className={`flex items-center px-4 py-4 hover:bg-green-800 transition-colors ${
                   isActive ? 'bg-green-800 border-l-4 border-white' : ''
                 }`}
               >

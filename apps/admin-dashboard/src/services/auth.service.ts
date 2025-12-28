@@ -9,8 +9,8 @@ export const login = async (credentials: LoginCredentials): Promise<AuthResponse
 
   // Store token and admin data
   if (response.data.success) {
-    localStorage.setItem('admin_token', response.data.data.token);
-    localStorage.setItem('admin_data', JSON.stringify(response.data.data.admin));
+    localStorage.setItem('admin_token', response.data.data.access_token);
+    localStorage.setItem('admin_data', JSON.stringify(response.data.data.user));
   }
 
   return response.data;
@@ -28,7 +28,8 @@ export const logout = (): void => {
  * Check if admin is authenticated
  */
 export const isAuthenticated = (): boolean => {
-  return !!localStorage.getItem('admin_token');
+  const token = localStorage.getItem('admin_token');
+  return !!token && token !== 'undefined' && token !== 'null';
 };
 
 /**
@@ -36,5 +37,13 @@ export const isAuthenticated = (): boolean => {
  */
 export const getCurrentAdmin = () => {
   const adminData = localStorage.getItem('admin_data');
-  return adminData ? JSON.parse(adminData) : null;
+  if (!adminData || adminData === 'undefined' || adminData === 'null') {
+    return null;
+  }
+  try {
+    return JSON.parse(adminData);
+  } catch (error) {
+    console.error('Error parsing admin data:', error);
+    return null;
+  }
 };

@@ -9,8 +9,8 @@ export const login = async (credentials: LoginCredentials): Promise<AuthResponse
 
   // Store token and merchant data
   if (response.data.success) {
-    localStorage.setItem('merchant_token', response.data.data.token);
-    localStorage.setItem('merchant_data', JSON.stringify(response.data.data.merchant));
+    localStorage.setItem('merchant_token', response.data.data.access_token);
+    localStorage.setItem('merchant_data', JSON.stringify(response.data.data.user));
   }
 
   return response.data;
@@ -36,7 +36,8 @@ export const logout = (): void => {
  * Check if merchant is authenticated
  */
 export const isAuthenticated = (): boolean => {
-  return !!localStorage.getItem('merchant_token');
+  const token = localStorage.getItem('merchant_token');
+  return !!token && token !== 'undefined' && token !== 'null';
 };
 
 /**
@@ -44,5 +45,13 @@ export const isAuthenticated = (): boolean => {
  */
 export const getCurrentMerchant = () => {
   const merchantData = localStorage.getItem('merchant_data');
-  return merchantData ? JSON.parse(merchantData) : null;
+  if (!merchantData || merchantData === 'undefined' || merchantData === 'null') {
+    return null;
+  }
+  try {
+    return JSON.parse(merchantData);
+  } catch (error) {
+    console.error('Error parsing merchant data:', error);
+    return null;
+  }
 };

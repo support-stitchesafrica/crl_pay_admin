@@ -21,7 +21,7 @@ export const getById = async (merchantId: string): Promise<Merchant> => {
  * Get pending merchants
  */
 export const getPending = async (): Promise<Merchant[]> => {
-  const response = await api.get('/merchants/status/pending');
+  const response = await api.get('/merchants?status=pending');
   return response.data.data;
 };
 
@@ -36,8 +36,11 @@ export const getStats = async (): Promise<MerchantStats> => {
 /**
  * Approve merchant
  */
-export const approve = async (merchantId: string): Promise<Merchant> => {
-  const response = await api.patch(`/merchants/${merchantId}/approve`);
+export const approve = async (merchantId: string, notes?: string): Promise<Merchant> => {
+  const response = await api.patch(`/merchants/${merchantId}/approve`, {
+    status: 'approved',
+    notes,
+  });
   return response.data.data;
 };
 
@@ -45,7 +48,10 @@ export const approve = async (merchantId: string): Promise<Merchant> => {
  * Reject merchant with reason
  */
 export const reject = async (merchantId: string, reason: string): Promise<Merchant> => {
-  const response = await api.patch(`/merchants/${merchantId}/reject`, { reason });
+  const response = await api.patch(`/merchants/${merchantId}/approve`, {
+    status: 'rejected',
+    notes: reason,
+  });
   return response.data.data;
 };
 
@@ -53,7 +59,10 @@ export const reject = async (merchantId: string, reason: string): Promise<Mercha
  * Suspend merchant with reason
  */
 export const suspend = async (merchantId: string, reason: string): Promise<Merchant> => {
-  const response = await api.patch(`/merchants/${merchantId}/suspend`, { reason });
+  const response = await api.patch(`/merchants/${merchantId}/approve`, {
+    status: 'suspended',
+    notes: reason,
+  });
   return response.data.data;
 };
 
@@ -61,7 +70,9 @@ export const suspend = async (merchantId: string, reason: string): Promise<Merch
  * Activate suspended merchant
  */
 export const activate = async (merchantId: string): Promise<Merchant> => {
-  const response = await api.patch(`/merchants/${merchantId}/activate`);
+  const response = await api.patch(`/merchants/${merchantId}/approve`, {
+    status: 'approved',
+  });
   return response.data.data;
 };
 
