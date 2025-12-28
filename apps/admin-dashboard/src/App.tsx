@@ -5,6 +5,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import MerchantApproval from './pages/MerchantApproval';
+import Customers from './pages/Customers';
 
 const queryClient = new QueryClient();
 
@@ -28,6 +29,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <MerchantApproval />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/customers"
+              element={
+                <ProtectedRoute>
+                  <Customers />
                 </ProtectedRoute>
               }
             />

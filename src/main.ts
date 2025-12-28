@@ -7,6 +7,7 @@ import { WinstonModule } from 'nest-winston';
 import * as winston from 'winston';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { ValidationPipe } from '@nestjs/common';
+import { AuthService } from './modules/auth/auth.service';
 
 async function bootstrap() {
   dotenv.config();
@@ -96,6 +97,16 @@ async function bootstrap() {
 
   logger.log(`Application started on port ${port}`);
   logger.log(`Swagger UI available at http://localhost:${port}/api/v1/swagger-ui`);
+
+  // Create default admin if none exists
+  try {
+    logger.log('Initializing default admin account...');
+    const authService = app.get(AuthService);
+    await authService.createDefaultAdmin();
+    logger.log('Default admin initialization completed');
+  } catch (error) {
+    logger.error('Failed to initialize default admin', error.stack);
+  }
 }
 
 bootstrap();

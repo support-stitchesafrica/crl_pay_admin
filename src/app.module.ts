@@ -2,7 +2,11 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { FirebaseService } from './config/firebase.config';
+import { FirebaseModule } from './config/firebase.module';
+import { MerchantsModule } from './modules/merchants/merchants.module';
+import { AuthModule } from './modules/auth/auth.module';
+import { CustomersModule } from './modules/customers/customers.module';
+import { CreditModule } from './modules/credit/credit.module';
 
 @Module({
   imports: [
@@ -10,9 +14,13 @@ import { FirebaseService } from './config/firebase.config';
       isGlobal: true,
       envFilePath: '.env',
     }),
+    FirebaseModule,
+    MerchantsModule,
+    AuthModule,
+    CustomersModule,
+    CreditModule,
   ],
   controllers: [AppController],
-  providers: [AppService, FirebaseService],
-  exports: [FirebaseService],
+  providers: [AppService],
 })
 export class AppModule {}

@@ -1,8 +1,73 @@
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import DashboardLayout from '../components/DashboardLayout';
-import { DollarSign, Users, TrendingUp, Receipt } from 'lucide-react';
+import { DollarSign, Users, TrendingUp, Receipt, Loader2, AlertCircle } from 'lucide-react';
+import * as dashboardService from '../services/dashboard.service';
+import { MerchantDashboardStats } from '../services/types';
 
 export default function Dashboard() {
+  const [stats, setStats] = useState<MerchantDashboardStats | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const loadStats = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Get merchant ID from stored data
+      const merchantData = localStorage.getItem('merchant_data');
+      if (!merchantData) {
+        throw new Error('Merchant data not found');
+      }
+      const merchant = JSON.parse(merchantData);
+
+      const data = await dashboardService.getStats(merchant.merchantId);
+      setStats(data);
+    } catch (err: any) {
+      setError(err.response?.data?.message || err.message || 'Failed to load dashboard statistics');
+      console.error('Error loading stats:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadStats();
+  }, []);
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-NG', {
+      style: 'currency',
+      currency: 'NGN',
+      minimumFractionDigits: 0,
+    }).format(amount);
+  };
+
+  if (loading) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="w-8 h-8 animate-spin text-green-600" />
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <DashboardLayout>
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center gap-3">
+          <AlertCircle className="w-5 h-5 text-red-600" />
+          <div>
+            <h3 className="font-semibold text-red-900">Error Loading Dashboard</h3>
+            <p className="text-sm text-red-700">{error}</p>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
   return (
     <DashboardLayout>
       {/* Stats */}
@@ -11,7 +76,10 @@ export default function Dashboard() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600">Total Revenue</p>
-              <p className="text-3xl font-bold">₦2.4M</p>
+              <p className="text-3xl font-bold">{formatCurrency(stats?.totalRevenue || 0)}</p>
+              <p className="text-xs text-gray-500 mt-1">
+                All-time earnings
+              </p>
             </div>
             <DollarSign className="w-12 h-12 text-green-600" />
           </div>
@@ -21,7 +89,10 @@ export default function Dashboard() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600">Active Customers</p>
-              <p className="text-3xl font-bold">156</p>
+              <p className="text-3xl font-bold">{stats?.activeCustomers || 0}</p>
+              <p className="text-xs text-gray-500 mt-1">
+                Registered customers
+              </p>
             </div>
             <Users className="w-12 h-12 text-blue-600" />
           </div>
@@ -31,7 +102,10 @@ export default function Dashboard() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600">Active Loans</p>
-              <p className="text-3xl font-bold">89</p>
+              <p className="text-3xl font-bold">{stats?.activeLoans || 0}</p>
+              <p className="text-xs text-gray-500 mt-1">
+                {stats?.completedLoans || 0} completed
+              </p>
             </div>
             <TrendingUp className="w-12 h-12 text-yellow-600" />
           </div>
@@ -44,7 +118,7 @@ export default function Dashboard() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Link
             to="/transactions"
-            className="p-4 border rounded hover:bg-gray-50 flex items-center gap-3"
+            className="p-4 border rounded hover:bg-gray-50 flex items-center gap-3 transition-colors"
           >
             <Receipt className="w-6 h-6 text-blue-600" />
             <div>
@@ -55,7 +129,7 @@ export default function Dashboard() {
 
           <Link
             to="/analytics"
-            className="p-4 border rounded hover:bg-gray-50 flex items-center gap-3"
+            className="p-4 border rounded hover:bg-gray-50 flex items-center gap-3 transition-colors"
           >
             <TrendingUp className="w-6 h-6 text-green-600" />
             <div>

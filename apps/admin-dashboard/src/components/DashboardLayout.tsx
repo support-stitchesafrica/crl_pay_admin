@@ -21,6 +21,7 @@ interface DashboardLayoutProps {
 const menuItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
   { icon: Users, label: 'Merchant Approvals', path: '/approvals' },
+  { icon: User, label: 'Customers', path: '/customers' },
   { icon: FileText, label: 'Loans', path: '/loans' },
   { icon: BarChart3, label: 'Analytics', path: '/analytics' },
   { icon: Settings, label: 'Settings', path: '/settings' },

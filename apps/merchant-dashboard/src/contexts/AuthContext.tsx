@@ -1,49 +1,69 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import * as authService from '../services/auth.service';
+
+interface Merchant {
+  merchantId: string;
+  businessName: string;
+  email: string;
+  phone: string;
+  status: string;
+  businessCategory?: string;
+  apiKey?: string;
+}
 
 interface AuthContextType {
-  merchant: any | null;
+  merchant: Merchant | null;
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
   isAuthenticated: boolean;
+  loading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [merchant, setMerchant] = useState<any | null>(null);
+  const [merchant, setMerchant] = useState<Merchant | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem('merchant_token');
-    const merchantData = localStorage.getItem('merchant_data');
+    // Check if user is already authenticated on mount
+    const checkAuth = () => {
+      const isAuth = authService.isAuthenticated();
+      if (isAuth) {
+        const merchantData = authService.getCurrentMerchant();
+        setMerchant(merchantData);
+        setIsAuthenticated(true);
+      }
+      setLoading(false);
+    };
 
-    if (token && merchantData) {
-      setMerchant(JSON.parse(merchantData));
-      setIsAuthenticated(true);
-    }
+    checkAuth();
   }, []);
 
   const login = async (email: string, password: string) => {
-    // Simulated login - replace with actual API call
-    const mockMerchant = { email, businessName: 'Sample Merchant Store' };
-    const mockToken = 'mock-jwt-token';
+    try {
+      const response = await authService.login({ email, password });
 
-    localStorage.setItem('merchant_token', mockToken);
-    localStorage.setItem('merchant_data', JSON.stringify(mockMerchant));
-
-    setMerchant(mockMerchant);
-    setIsAuthenticated(true);
+      if (response.success) {
+        const merchantData = authService.getCurrentMerchant();
+        setMerchant(merchantData);
+        setIsAuthenticated(true);
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      throw error;
+    }
   };
 
   const logout = () => {
-    localStorage.removeItem('merchant_token');
-    localStorage.removeItem('merchant_data');
+    authService.logout();
     setMerchant(null);
     setIsAuthenticated(false);
   };
 
   return (
-    <AuthContext.Provider value={{ merchant, login, logout, isAuthenticated }}>
+    <AuthContext.Provider value={{ merchant, login, logout, isAuthenticated, loading }}>
       {children}
     </AuthContext.Provider>
   );

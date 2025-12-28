@@ -1,49 +1,67 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import * as authService from '../services/auth.service';
+
+interface Admin {
+  adminId: string;
+  name: string;
+  email: string;
+  role: string;
+  isActive: boolean;
+}
 
 interface AuthContextType {
-  admin: any | null;
+  admin: Admin | null;
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
   isAuthenticated: boolean;
+  loading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [admin, setAdmin] = useState<any | null>(null);
+  const [admin, setAdmin] = useState<Admin | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem('admin_token');
-    const adminData = localStorage.getItem('admin_data');
+    // Check if user is already authenticated on mount
+    const checkAuth = () => {
+      const isAuth = authService.isAuthenticated();
+      if (isAuth) {
+        const adminData = authService.getCurrentAdmin();
+        setAdmin(adminData);
+        setIsAuthenticated(true);
+      }
+      setLoading(false);
+    };
 
-    if (token && adminData) {
-      setAdmin(JSON.parse(adminData));
-      setIsAuthenticated(true);
-    }
+    checkAuth();
   }, []);
 
   const login = async (email: string, password: string) => {
-    // Simulated login - replace with actual API call
-    const mockAdmin = { email, name: 'Admin User' };
-    const mockToken = 'mock-jwt-token';
+    try {
+      const response = await authService.login({ email, password });
 
-    localStorage.setItem('admin_token', mockToken);
-    localStorage.setItem('admin_data', JSON.stringify(mockAdmin));
-
-    setAdmin(mockAdmin);
-    setIsAuthenticated(true);
+      if (response.success) {
+        const adminData = authService.getCurrentAdmin();
+        setAdmin(adminData);
+        setIsAuthenticated(true);
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      throw error;
+    }
   };
 
   const logout = () => {
-    localStorage.removeItem('admin_token');
-    localStorage.removeItem('admin_data');
+    authService.logout();
     setAdmin(null);
     setIsAuthenticated(false);
   };
 
   return (
-    <AuthContext.Provider value={{ admin, login, logout, isAuthenticated }}>
+    <AuthContext.Provider value={{ admin, login, logout, isAuthenticated, loading }}>
       {children}
     </AuthContext.Provider>
   );
