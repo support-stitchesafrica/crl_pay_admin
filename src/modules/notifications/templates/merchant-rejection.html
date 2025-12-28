@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+    .header { background: #dc2626; color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
+    .content { background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 8px 8px; }
+    .footer { text-align: center; padding: 20px; color: #6b7280; font-size: 14px; }
+    .info-box { background: #fef2f2; padding: 15px; border-left: 4px solid #dc2626; margin: 15px 0; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Application Status Update</h1>
+    </div>
+    <div class="content">
+      <p>Dear {{merchantName}},</p>
+      <p>Thank you for your interest in becoming a CRL Pay merchant. After careful review, we regret to inform you that we are unable to approve your application at this time.</p>
+      {{#if reason}}
+        <div class="info-box">
+          <p><strong>Reason:</strong> {{reason}}</p>
+        </div>
+      {{/if}}
+      <p>You may reapply in the future after addressing the concerns mentioned above. If you have any questions or would like more information, please contact our support team.</p>
+      <p>Best regards,<br>The CRL Pay Team</p>
+    </div>
+    <div class="footer">
+      <p>&copy; {{currentYear}} CRL Pay. All rights reserved.</p>
+    </div>
+  </div>
+</body>
+</html>

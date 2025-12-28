@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+    .header { background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
+    .content { background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 8px 8px; }
+    .footer { text-align: center; padding: 20px; color: #6b7280; font-size: 14px; }
+    .success-badge { background: #ede9fe; color: #6b21a8; padding: 10px 20px; border-radius: 20px; display: inline-block; margin: 10px 0; }
+    .info-box { background: #faf5ff; padding: 15px; border-radius: 6px; margin: 15px 0; border-left: 4px solid #a855f7; }
+    .celebration { font-size: 48px; margin: 20px 0; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="celebration">🎊🎉🎊</div>
+      <h1>Congratulations!</h1>
+      <div class="success-badge">Loan Fully Repaid</div>
+    </div>
+    <div class="content">
+      <p>Dear {{customerName}},</p>
+      <p>Congratulations! You have successfully completed all payments for your loan. Your account is now in good standing.</p>
+      <div class="info-box">
+        <p><strong>Loan ID:</strong> {{loanId}}</p>
+        <p><strong>Original Amount:</strong> ₦{{originalAmount}}</p>
+        <p><strong>Total Paid:</strong> ₦{{totalPaid}}</p>
+        <p><strong>Completion Date:</strong> {{completionDate}}</p>
+        <p><strong>Merchant:</strong> {{merchantName}}</p>
+      </div>
+      <p><strong>What this means:</strong></p>
+      <ul>
+        <li>Your credit score has been positively impacted</li>
+        <li>You may be eligible for higher loan amounts in the future</li>
+        <li>Thank you for being a responsible borrower</li>
+      </ul>
+      <p>We appreciate your business and look forward to serving you again!</p>
+      <p>Best regards,<br>CRL Pay</p>
+    </div>
+    <div class="footer">
+      <p>&copy; {{currentYear}} CRL Pay. All rights reserved.</p>
+    </div>
+  </div>
+</body>
+</html>

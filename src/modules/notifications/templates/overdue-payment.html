@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+    .header { background: #991b1b; color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
+    .content { background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 8px 8px; }
+    .footer { text-align: center; padding: 20px; color: #6b7280; font-size: 14px; }
+    .alert-box { background: #fee2e2; padding: 15px; border-radius: 6px; margin: 15px 0; border-left: 4px solid #991b1b; }
+    .amount { font-size: 24px; font-weight: bold; color: #991b1b; }
+    .warning { color: #991b1b; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>⚠️ URGENT: Overdue Payment</h1>
+    </div>
+    <div class="content">
+      <p>Dear {{customerName}},</p>
+      <p class="warning">Your payment is now OVERDUE. Immediate action is required.</p>
+      <div class="alert-box">
+        <p><strong>Loan ID:</strong> {{loanId}}</p>
+        <p><strong>Amount Due:</strong> <span class="amount">₦{{amountDue}}</span></p>
+        <p><strong>Original Due Date:</strong> {{originalDueDate}}</p>
+        <p><strong>Days Overdue:</strong> {{daysOverdue}}</p>
+        <p><strong>Late Fees:</strong> ₦{{lateFees}}</p>
+        <p><strong>Total Amount Now Due:</strong> <span class="amount">₦{{totalAmountDue}}</span></p>
+        <p><strong>Merchant:</strong> {{merchantName}}</p>
+      </div>
+      <p><strong>Consequences of non-payment:</strong></p>
+      <ul>
+        <li>Additional late fees will continue to accrue</li>
+        <li>Your credit score will be negatively impacted</li>
+        <li>You may be ineligible for future loans</li>
+        <li>Legal action may be pursued</li>
+        <li>Debt may be reported to credit bureaus</li>
+      </ul>
+      <p><strong>Take action NOW:</strong></p>
+      <ul>
+        <li>Contact the merchant immediately to arrange payment</li>
+        <li>If experiencing financial difficulty, discuss a payment plan</li>
+        <li>Ensure sufficient funds are available for automatic deduction</li>
+      </ul>
+      <p>This is a serious matter. Please resolve this immediately.</p>
+      <p>CRL Pay Collection Team</p>
+    </div>
+    <div class="footer">
+      <p>&copy; {{currentYear}} CRL Pay. All rights reserved.</p>
+    </div>
+  </div>
+</body>
+</html>

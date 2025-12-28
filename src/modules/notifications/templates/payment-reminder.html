@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+    .header { background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
+    .content { background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 8px 8px; }
+    .footer { text-align: center; padding: 20px; color: #6b7280; font-size: 14px; }
+    .info-box { background: #fef3c7; padding: 15px; border-radius: 6px; margin: 15px 0; border-left: 4px solid #f59e0b; }
+    .amount { font-size: 24px; font-weight: bold; color: #1e3a8a; }
+    .button { display: inline-block; padding: 12px 30px; background: #3b82f6; color: white; text-decoration: none; border-radius: 6px; margin: 20px 0; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>⏰ Payment Reminder</h1>
+    </div>
+    <div class="content">
+      <p>Dear {{customerName}},</p>
+      <p>This is a friendly reminder that your payment is due in <strong>{{hoursRemaining}} hours</strong>.</p>
+      <div class="info-box">
+        <p><strong>Loan ID:</strong> {{loanId}}</p>
+        <p><strong>Amount Due:</strong> <span class="amount">₦{{amountDue}}</span></p>
+        <p><strong>Due Date:</strong> {{dueDate}}</p>
+        <p><strong>Merchant:</strong> {{merchantName}}</p>
+      </div>
+      <p>Please ensure you have sufficient funds available for automatic deduction.</p>
+      <p>If you have any questions or concerns, please contact the merchant directly.</p>
+      <p>Best regards,<br>CRL Pay</p>
+    </div>
+    <div class="footer">
+      <p>&copy; {{currentYear}} CRL Pay. All rights reserved.</p>
+    </div>
+  </div>
+</body>
+</html>

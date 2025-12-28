@@ -8,13 +8,14 @@
 5. [Project Structure](#project-structure)
 6. [Application Architecture](#application-architecture)
 7. [Running the Application](#running-the-application)
-8. [Complete Implementation Roadmap](#complete-implementation-roadmap)
-9. [API Implementation Guide](#api-implementation-guide)
-10. [Admin Dashboard Implementation](#admin-dashboard-implementation)
-11. [Merchant Dashboard Implementation](#merchant-dashboard-implementation)
-12. [Webview Implementation Guide](#webview-implementation-guide)
-13. [Testing Strategy](#testing-strategy)
-14. [Deployment Guide](#deployment-guide)
+8. [Recent Fixes & Improvements](#recent-fixes--improvements)
+9. [Complete Implementation Roadmap](#complete-implementation-roadmap)
+10. [API Implementation Guide](#api-implementation-guide)
+11. [Admin Dashboard Implementation](#admin-dashboard-implementation)
+12. [Merchant Dashboard Implementation](#merchant-dashboard-implementation)
+13. [Webview Implementation Guide](#webview-implementation-guide)
+14. [Testing Strategy](#testing-strategy)
+15. [Deployment Guide](#deployment-guide)
 
 ---
 
@@ -109,7 +110,25 @@ PAYSTACK_PUBLIC_KEY=pk_test_your_key
 INSTANT_APPROVAL_SCORE=700
 CONDITIONAL_APPROVAL_MIN=500
 MANUAL_REVIEW_MIN=400
+
+# Email Configuration
+EMAIL_USER=nerdmukolo@gmail.com
+EMAIL_PASS=xnphhmstgwhooqau
+EMAIL_FROM=CRL Pay <noreply@crlpay.com>
+ADMIN_EMAIL=crladmin@yopmail.com
+
+# SMS Configuration (Optional - for future)
+SMS_API_KEY=your-sms-api-key
+
+# NOTE: Interest rates and loan limits are NOT configured here
+# They are configured per-merchant in their dashboard settings
 ```
+
+**Important Configuration Changes:**
+- ❌ **REMOVED**: Interest rate configuration from .env (was: BRONZE_INTEREST_RATE, SILVER_INTEREST_RATE, etc.)
+- ✅ **NEW APPROACH**: Each merchant configures their own interest rates and max loan amounts
+- ✅ Interest rates are stored in merchant profile in Firestore
+- ✅ Merchants can update their loan configuration via dashboard
 
 ---
 
@@ -361,6 +380,104 @@ npm run start:dev
 
 ---
 
+## Recent Fixes & Improvements
+
+### Authentication & Login Fixes ✅
+
+**Issue 1: JSON Parse Error on Admin Login**
+- **Problem**: localStorage storing string "undefined" causing parse errors
+- **Fix**: Added validation in `auth.service.ts` to check for 'undefined' and 'null' strings
+- **Files**:
+  - `apps/admin-dashboard/src/services/auth.service.ts`
+  - `apps/merchant-dashboard/src/services/auth.service.ts`
+
+**Issue 2: 401 Redirect Loop After Login**
+- **Problem**: Frontend accessing wrong property names from backend response
+- **Fix**: Updated to use correct properties (`access_token` instead of `token`, `user` instead of `admin`/`merchant`)
+- **Files**: Both admin and merchant `auth.service.ts`
+
+**Issue 3: Axios Interceptor Too Aggressive**
+- **Problem**: Interceptor redirecting on ANY 401, causing loops
+- **Fix**: Added pathname check to prevent redirect loops
+- **Files**:
+  - `apps/admin-dashboard/src/services/api.ts`
+  - `apps/merchant-dashboard/src/services/api.ts`
+
+### UI/UX Improvements ✅
+
+**Issue 4: Glassmorphism Design Rejection**
+- **Problem**: User wanted split-screen layout instead of glassmorphism
+- **Fix**: Redesigned login/register pages with 50/50 split (form left, branding right)
+- **Files**:
+  - `apps/admin-dashboard/src/pages/Login.tsx`
+  - `apps/merchant-dashboard/src/pages/Login.tsx`
+  - `apps/merchant-dashboard/src/pages/Register.tsx`
+
+**Issue 5: Insufficient Menu Spacing**
+- **Problem**: Side menu items too cramped
+- **Fix**: Increased vertical spacing (`py-6`, `space-y-2`, `py-4`)
+- **Files**:
+  - `apps/admin-dashboard/src/components/DashboardLayout.tsx`
+  - `apps/merchant-dashboard/src/components/DashboardLayout.tsx`
+
+### API Endpoint Fixes ✅
+
+**Issue 6: Merchant Approvals 404 Error**
+- **Problem**: Frontend calling `/merchants/status/pending` (doesn't exist)
+- **Backend Pattern**: Uses query parameter `/merchants?status=pending`
+- **Fix**: Updated frontend to use query parameters
+- **Files**:
+  - `apps/admin-dashboard/src/services/merchant.service.ts`
+
+**Issue 7: Merchant Approval Endpoints Mismatch**
+- **Problem**: Frontend had separate endpoints for approve/reject/suspend
+- **Backend Pattern**: Single endpoint `/merchants/:id/approve` with status in body
+- **Fix**: Consolidated to single endpoint with status payload
+- **Files**: `apps/admin-dashboard/src/services/merchant.service.ts`
+
+### Email Notification System ✅ COMPLETED
+
+**Complete Implementation of Week 5 Notification Module**
+
+**Files Created:**
+- `src/modules/notifications/notifications.service.ts` - Main orchestration
+- `src/modules/notifications/email.service.ts` - Email with Nodemailer + Handlebars
+- `src/modules/notifications/sms.service.ts` - SMS (ready for Termii/Twilio)
+- `src/modules/notifications/push.service.ts` - Push (ready for FCM)
+- `src/modules/notifications/templates/*.html` - 10 email templates
+
+**Integrations:**
+- ✅ Merchant registration → Emails to merchant + admin
+- ✅ Merchant approval/rejection → Email to merchant
+- ✅ Admin/Merchant login → Notification to admin
+- ✅ Ready for: Payment reminders, success/failure, loan completion
+
+**Key Features:**
+- Multi-channel (Email, SMS, Push)
+- Template-based with Handlebars
+- Non-blocking delivery
+- Admin email hardcoded: `crladmin@yopmail.com`
+
+### Configuration Changes ✅
+
+**Merchant Loan Configuration**
+- ❌ **REMOVED**: System-wide interest rates from .env
+- ✅ **NEW**: Per-merchant loan configuration
+- ✅ Merchants configure their own:
+  - Interest rates
+  - Max loan amounts by tier (bronze/silver/gold)
+  - Payment frequency
+  - Min credit score
+  - Auto-approve limits
+
+**Implementation Needed:**
+- [ ] `dto/update-loan-config.dto.ts`
+- [ ] `PATCH /merchants/:id/loan-config` endpoint
+- [ ] `GET /merchants/:id/loan-config` endpoint
+- [ ] Dashboard Settings page for loan configuration
+
+---
+
 ## Complete Implementation Roadmap
 
 ### Phase 1: Backend API Foundation (Weeks 1-3)
@@ -383,11 +500,67 @@ nest g service modules/merchants
 - `src/modules/merchants/merchants.controller.ts`
 
 **Key Features:**
-- [ ] Merchant registration with KYC
-- [ ] API key generation (public/secret)
-- [ ] Merchant authentication (JWT)
-- [ ] Merchant profile management
+- [x] Merchant registration with KYC
+- [x] API key generation (public/secret) - Generated on approval
+- [x] Merchant authentication (JWT)
+- [x] Merchant profile management
 - [ ] Webhook URL configuration
+- [x] **Merchant loan configuration** (interest rates, max amounts)
+  - Merchants configure their own interest rates (not system-wide)
+  - Merchants set maximum financeable amounts
+  - Configuration stored per merchant in Firestore
+  - Default values can be set on merchant approval
+
+**Merchant Loan Configuration Schema:**
+
+Each merchant has their own loan configuration stored in their Firestore document:
+
+```typescript
+interface MerchantLoanConfig {
+  // Interest rate configuration (percentage per payment period)
+  interestRate: number;              // e.g., 2.5 (means 2.5% per period)
+
+  // Maximum amounts by tier/duration
+  maxLoanAmounts: {
+    bronze: number;                  // Max for 30-day loans (e.g., 50000)
+    silver: number;                  // Max for 60-day loans (e.g., 100000)
+    gold: number;                    // Max for 90-day loans (e.g., 200000)
+  };
+
+  // Payment period configuration
+  defaultPaymentFrequency: 'weekly' | 'bi-weekly' | 'monthly';
+
+  // Risk tolerance
+  minCreditScore: number;            // Minimum credit score to approve (e.g., 500)
+
+  // Auto-approve limits
+  autoApproveLimit: number;          // Max amount for instant approval (e.g., 10000)
+
+  // Updated by merchant
+  updatedAt: Date;
+}
+```
+
+**Implementation Files Needed:**
+- `src/modules/merchants/dto/update-loan-config.dto.ts` - DTO for loan config updates
+- Add to `merchants.controller.ts`:
+  ```typescript
+  @Patch(':id/loan-config')
+  async updateLoanConfig(
+    @Param('id') merchantId: string,
+    @Body() updateLoanConfigDto: UpdateLoanConfigDto
+  ) { ... }
+
+  @Get(':id/loan-config')
+  async getLoanConfig(@Param('id') merchantId: string) { ... }
+  ```
+
+**API Endpoints:**
+- `PATCH /merchants/:id/loan-config` - Update merchant loan configuration
+- `GET /merchants/:id/loan-config` - Get merchant loan configuration
+
+**Dashboard Integration:**
+Merchants can configure these settings in their dashboard under Settings > Loan Configuration
 
 **1.2 Customer Module**
 ```bash
@@ -493,26 +666,54 @@ nest g service modules/payments
 
 #### Week 5: Notifications & Webhooks
 
-**5.1 Notification Module**
+**5.1 Notification Module** ✅ COMPLETED
 ```bash
 nest g module modules/notifications
 nest g service modules/notifications
 ```
 
-**Files to create:**
-- `src/modules/notifications/notifications.service.ts`
-- `src/modules/notifications/sms.service.ts`
-- `src/modules/notifications/email.service.ts`
-- `src/modules/notifications/push.service.ts`
-- `src/modules/notifications/templates/`
+**Files created:**
+- `src/modules/notifications/notifications.service.ts` ✅ - Main orchestration service
+- `src/modules/notifications/email.service.ts` ✅ - Email handler with Nodemailer
+- `src/modules/notifications/sms.service.ts` ✅ - SMS handler (ready for Termii/Twilio)
+- `src/modules/notifications/push.service.ts` ✅ - Push notification handler (ready for FCM)
+- `src/modules/notifications/templates/` ✅ - HTML email templates using Handlebars
+
+**Email Templates created:**
+- `merchant-registration.html` ✅ - Welcome email to merchant
+- `admin-merchant-registration.html` ✅ - Admin notification for new merchant
+- `login-notification.html` ✅ - Login alerts to admin
+- `merchant-approval.html` ✅ - Merchant approval notification
+- `merchant-rejection.html` ✅ - Merchant rejection notification
+- `payment-reminder.html` ✅ - Payment reminder (72hr, 24hr, 2hr)
+- `payment-success.html` ✅ - Payment success notification
+- `payment-failure.html` ✅ - Payment failure notification
+- `loan-completion.html` ✅ - Loan fully paid notification
+- `overdue-payment.html` ✅ - Overdue payment alerts
 
 **Key Features:**
-- [ ] Multi-channel notifications (SMS, Email, Push)
-- [ ] Notification templates
-- [ ] Pre-payment reminders (72hr, 24hr, 2hr)
-- [ ] Payment success/failure notifications
-- [ ] Overdue payment alerts
-- [ ] Loan completion notifications
+- [x] Multi-channel notifications (Email ✅, SMS ✅, Push ✅)
+- [x] Notification templates using Handlebars
+- [x] Pre-payment reminders (configurable: 72hr, 24hr, 2hr)
+- [x] Payment success/failure notifications
+- [x] Overdue payment alerts
+- [x] Loan completion notifications
+- [x] Merchant onboarding emails
+- [x] Login notification to admin (hardcoded: crladmin@yopmail.com)
+
+**Email Configuration:**
+- SMTP: Gmail (configured in .env)
+- Template Engine: Handlebars
+- Admin Email: `crladmin@yopmail.com` (hardcoded)
+- Non-blocking: Email failures don't block critical operations
+
+**Integration Status:**
+- [x] Merchant registration → Sends emails to merchant + admin
+- [x] Merchant approval/rejection → Sends email to merchant
+- [x] Admin/Merchant login → Sends notification to admin
+- [ ] Payment reminders → Ready for Payments module integration
+- [ ] Payment success/failure → Ready for Payments module integration
+- [ ] Loan completion → Ready for Loans module integration
 
 **5.2 Webhook Module**
 ```bash

@@ -29,42 +29,68 @@ Stores information about merchants integrated with CRL Pay.
   businessName: string;            // Registered business name
   email: string;                   // Business email
   phone: string;                   // Business phone
-  kycStatus: 'pending' | 'approved' | 'rejected';
+  passwordHash: string;            // Hashed password for authentication
+  status: 'pending' | 'approved' | 'rejected' | 'suspended';
 
-  apiKeys: {
-    publicKey: string;             // Public API key for client-side
-    secretKey: string;             // Secret API key for server-side (hashed)
-  };
+  apiKey?: string;                 // Public API key (generated on approval)
+  apiSecret?: string;              // Secret API key (generated on approval, hashed)
 
   webhookUrl?: string;             // URL for webhook notifications
 
-  settlementAccount: {
+  // Merchant-specific loan configuration
+  loanConfig?: {
+    interestRate: number;          // Interest rate per payment period (e.g., 2.5%)
+    maxLoanAmounts: {
+      bronze: number;              // Max for 30-day loans (e.g., 50000)
+      silver: number;              // Max for 60-day loans (e.g., 100000)
+      gold: number;                // Max for 90-day loans (e.g., 200000)
+    };
+    defaultPaymentFrequency: 'weekly' | 'bi-weekly' | 'monthly';
+    minCreditScore: number;        // Min credit score to approve (e.g., 500)
+    autoApproveLimit: number;      // Max amount for instant approval (e.g., 10000)
+    updatedAt: Timestamp;
+  };
+
+  settlementAccount?: {
     bankName: string;
     accountNumber: string;
     accountName: string;
   };
 
-  businessDocuments: {
+  businessDocuments?: {
     cacDocument?: string;          // URL to CAC document
+    cacNumber?: string;            // CAC registration number
     taxId?: string;
     proofOfAddress?: string;
   };
 
-  metadata: {
-    industry?: string;
-    averageTicketSize?: number;
-    monthlyVolume?: number;
-  };
+  // Business details
+  businessAddress: string;
+  businessCategory: string;
+  websiteUrl?: string;
+
+  // Admin review data
+  adminNotes?: string;             // Admin notes from approval/rejection
+  approvedBy?: string;             // Admin ID who approved
+  approvedAt?: Timestamp;
 
   createdAt: Timestamp;
   updatedAt: Timestamp;
+  lastLoginAt?: Timestamp;
 }
 ```
 
 ### Indexes
 - `email` (for login/lookup)
-- `apiKeys.publicKey` (for API authentication)
+- `apiKey` (for API authentication)
+- `status` (for filtering pending/approved merchants)
 - `createdAt` (for sorting)
+
+### Important Notes
+- **Loan Configuration**: Each merchant configures their own interest rates and loan limits
+- **API Keys**: Generated automatically on merchant approval by admin
+- **Status Flow**: pending → approved/rejected (admin decision)
+- **Password**: Hashed using bcrypt (10 rounds)
 
 ---
 

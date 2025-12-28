@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+    .header { background: #dc2626; color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
+    .content { background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 8px 8px; }
+    .footer { text-align: center; padding: 20px; color: #6b7280; font-size: 14px; }
+    .error-box { background: #fef2f2; padding: 15px; border-radius: 6px; margin: 15px 0; border-left: 4px solid #dc2626; }
+    .amount { font-size: 24px; font-weight: bold; color: #dc2626; }
+    .button { display: inline-block; padding: 12px 30px; background: #3b82f6; color: white; text-decoration: none; border-radius: 6px; margin: 20px 0; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>❌ Payment Failed</h1>
+    </div>
+    <div class="content">
+      <p>Dear {{customerName}},</p>
+      <p>We were unable to process your payment. Please take action immediately to avoid late fees.</p>
+      <div class="error-box">
+        <p><strong>Loan ID:</strong> {{loanId}}</p>
+        <p><strong>Amount Due:</strong> <span class="amount">₦{{amountDue}}</span></p>
+        <p><strong>Due Date:</strong> {{dueDate}}</p>
+        <p><strong>Merchant:</strong> {{merchantName}}</p>
+        <p><strong>Failure Reason:</strong> {{failureReason}}</p>
+        {{#if retryDate}}<p><strong>Next Retry:</strong> {{retryDate}}</p>{{/if}}
+      </div>
+      <p><strong>What to do next:</strong></p>
+      <ul>
+        <li>Ensure sufficient funds are available in your account</li>
+        <li>Contact your bank if there are any restrictions on your account</li>
+        <li>Payment will be retried automatically</li>
+        <li>Contact the merchant if you need to make alternative arrangements</li>
+      </ul>
+      <p>Please resolve this issue promptly to avoid additional charges.</p>
+      <p>Best regards,<br>CRL Pay</p>
+    </div>
+    <div class="footer">
+      <p>&copy; {{currentYear}} CRL Pay. All rights reserved.</p>
+    </div>
+  </div>
+</body>
+</html>

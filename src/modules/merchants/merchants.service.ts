@@ -6,13 +6,17 @@ import { UpdateMerchantDto } from './dto/update-merchant.dto';
 import { ApproveMerchantDto } from './dto/approve-merchant.dto';
 import { Merchant } from '../../entities/merchant.entity';
 import { generateApiKey, generateApiSecret } from '../../common/utils/crypto.utils';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class MerchantsService {
   private readonly logger = new Logger(MerchantsService.name);
   private merchantsCollection: FirebaseFirestore.CollectionReference;
 
-  constructor(@Inject('FIRESTORE') private firestore: Firestore) {
+  constructor(
+    @Inject('FIRESTORE') private firestore: Firestore,
+    private notificationsService: NotificationsService,
+  ) {
     this.merchantsCollection = this.firestore.collection('crl_merchants');
   }
 
@@ -56,6 +60,11 @@ export class MerchantsService {
       await merchantRef.set(merchant);
       this.logger.log(`Merchant created successfully: ${merchant.businessName} (ID: ${merchantId})`);
       this.logger.log(`Status: pending - awaiting admin approval`);
+
+      // Send registration emails (don't await to avoid blocking registration)
+      this.notificationsService
+        .sendMerchantRegistrationEmail(merchant.email, merchant.businessName)
+        .catch((err) => this.logger.error(`Failed to send registration email: ${err.message}`));
 
       // Remove passwordHash from response
       const { passwordHash: _, ...merchantResponse } = merchant;
@@ -172,6 +181,17 @@ export class MerchantsService {
 
       await merchantRef.update(updateData);
       this.logger.log(`✅ Merchant ${approveMerchantDto.status} successfully by admin ${adminId}`);
+
+      // Send appropriate email based on status
+      if (approveMerchantDto.status === 'approved') {
+        this.notificationsService
+          .sendMerchantApprovalEmail(merchantData.email, merchantData.businessName, approveMerchantDto.notes)
+          .catch((err) => this.logger.error(`Failed to send approval email: ${err.message}`));
+      } else if (approveMerchantDto.status === 'rejected') {
+        this.notificationsService
+          .sendMerchantRejectionEmail(merchantData.email, merchantData.businessName, approveMerchantDto.notes)
+          .catch((err) => this.logger.error(`Failed to send rejection email: ${err.message}`));
+      }
 
       return this.findOne(merchantId);
     } catch (error) {

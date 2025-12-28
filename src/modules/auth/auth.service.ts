@@ -3,6 +3,7 @@ import { JwtService } from '@nestjs/jwt';
 import { Firestore } from '@google-cloud/firestore';
 import * as bcrypt from 'bcrypt';
 import { MerchantsService } from '../merchants/merchants.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { Merchant } from '../../entities/merchant.entity';
 import { Admin } from '../../entities/admin.entity';
 
@@ -23,6 +24,7 @@ export class AuthService {
     @Inject('FIRESTORE') private firestore: Firestore,
     private jwtService: JwtService,
     private merchantsService: MerchantsService,
+    private notificationsService: NotificationsService,
   ) {
     this.adminsCollection = this.firestore.collection('crl_admins');
   }
@@ -76,6 +78,12 @@ export class AuthService {
       const { passwordHash, ...merchantWithoutPassword } = merchantData;
 
       this.logger.log(`Merchant login successful: ${merchantData.businessName} (${email})`);
+
+      // Send login notification to admin (don't await to avoid blocking login)
+      this.notificationsService
+        .sendLoginNotificationToAdmin('merchant', merchantData.email, merchantData.businessName)
+        .catch((err) => this.logger.error(`Failed to send login notification: ${err.message}`));
+
       return {
         access_token: this.jwtService.sign(payload),
         user: merchantWithoutPassword,
@@ -129,6 +137,12 @@ export class AuthService {
       const { passwordHash, ...adminWithoutPassword } = admin;
 
       this.logger.log(`Admin login successful: ${admin.name} (${email})`);
+
+      // Send login notification to admin (don't await to avoid blocking login)
+      this.notificationsService
+        .sendLoginNotificationToAdmin('admin', admin.email, admin.name)
+        .catch((err) => this.logger.error(`Failed to send login notification: ${err.message}`));
+
       return {
         access_token: this.jwtService.sign(payload),
         user: adminWithoutPassword,
