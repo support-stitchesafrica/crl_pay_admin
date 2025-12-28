@@ -40,9 +40,9 @@ export class CustomersController {
   @ApiResponseDecorator({ status: 400, description: 'Invalid input data' })
   @ApiResponseDecorator({ status: 409, description: 'Customer already exists' })
   async create(@Body() createCustomerDto: CreateCustomerDto) {
-    this.logger.log(`📝 POST /customers - Registering new customer: ${createCustomerDto.email}`);
+    this.logger.log(`POST /customers - Registering new customer: ${createCustomerDto.email}`);
     const customer = await this.customersService.create(createCustomerDto);
-    this.logger.log(`✅ Customer registered successfully: ${customer.customerId}`);
+    this.logger.log(`Customer registered successfully: ${customer.customerId}`);
     return ApiResponse.success(
       customer,
       'Customer registered successfully',
@@ -58,9 +58,9 @@ export class CustomersController {
   @ApiResponseDecorator({ status: 401, description: 'Unauthorized' })
   @ApiResponseDecorator({ status: 403, description: 'Forbidden - Admin only' })
   async findAll() {
-    this.logger.log('📋 GET /customers - Fetching all customers');
+    this.logger.log('GET /customers - Fetching all customers');
     const customers = await this.customersService.findAll();
-    this.logger.log(`✅ Retrieved ${customers.length} customers`);
+    this.logger.log(`Retrieved ${customers.length} customers`);
     return ApiResponse.success(
       customers,
       'Customers retrieved successfully',
@@ -79,9 +79,9 @@ export class CustomersController {
   @ApiResponseDecorator({ status: 401, description: 'Unauthorized' })
   @ApiResponseDecorator({ status: 403, description: 'Forbidden - Admin only' })
   async getStats() {
-    this.logger.log('📊 GET /customers/stats - Fetching customer statistics');
+    this.logger.log('GET /customers/stats - Fetching customer statistics');
     const stats = await this.customersService.getCustomerStats();
-    this.logger.log(`✅ Statistics retrieved: Total=${stats.total}, Active=${stats.active}`);
+    this.logger.log(`Statistics retrieved: Total=${stats.total}, Active=${stats.active}`);
     return ApiResponse.success(
       stats,
       'Customer statistics retrieved successfully',
@@ -99,9 +99,9 @@ export class CustomersController {
   })
   @ApiResponseDecorator({ status: 401, description: 'Unauthorized' })
   async findByMerchant(@Param('merchantId') merchantId: string) {
-    this.logger.log(`📋 GET /customers/merchant/${merchantId} - Fetching customers for merchant`);
+    this.logger.log(`GET /customers/merchant/${merchantId} - Fetching customers for merchant`);
     const customers = await this.customersService.findByMerchant(merchantId);
-    this.logger.log(`✅ Found ${customers.length} customers for merchant ${merchantId}`);
+    this.logger.log(`Found ${customers.length} customers for merchant ${merchantId}`);
     return ApiResponse.success(
       customers,
       'Merchant customers retrieved successfully',
@@ -117,9 +117,9 @@ export class CustomersController {
   @ApiResponseDecorator({ status: 401, description: 'Unauthorized' })
   @ApiResponseDecorator({ status: 404, description: 'Customer not found' })
   async findOne(@Param('id') id: string) {
-    this.logger.log(`🔍 GET /customers/${id} - Fetching customer`);
+    this.logger.log(`GET /customers/${id} - Fetching customer`);
     const customer = await this.customersService.findOne(id);
-    this.logger.log(`✅ Customer found: ${customer.firstName} ${customer.lastName}`);
+    this.logger.log(`Customer found: ${customer.firstName} ${customer.lastName}`);
     return ApiResponse.success(customer, 'Customer retrieved successfully');
   }
 
@@ -137,9 +137,9 @@ export class CustomersController {
     @Param('id') id: string,
     @Body() updateCustomerDto: UpdateCustomerDto,
   ) {
-    this.logger.log(`📝 PATCH /customers/${id} - Updating customer`);
+    this.logger.log(`PATCH /customers/${id} - Updating customer`);
     const customer = await this.customersService.update(id, updateCustomerDto);
-    this.logger.log(`✅ Customer updated successfully: ${id}`);
+    this.logger.log(`Customer updated successfully: ${id}`);
     return ApiResponse.success(customer, 'Customer updated successfully');
   }
 
@@ -157,10 +157,10 @@ export class CustomersController {
     @Param('id') id: string,
     @Body('reason') reason: string,
   ) {
-    this.logger.log(`🚫 PATCH /customers/${id}/blacklist - Blacklisting customer`);
-    this.logger.log(`📝 Reason: ${reason}`);
+    this.logger.log(`PATCH /customers/${id}/blacklist - Blacklisting customer`);
+    this.logger.log(`Reason: ${reason}`);
     const customer = await this.customersService.blacklist(id, reason);
-    this.logger.log(`✅ Customer blacklisted: ${id}`);
+    this.logger.log(`Customer blacklisted: ${id}`);
     return ApiResponse.success(
       customer,
       'Customer blacklisted successfully',
@@ -182,9 +182,9 @@ export class CustomersController {
     description: 'Cannot delete customer with active loans',
   })
   async remove(@Param('id') id: string) {
-    this.logger.log(`🗑️ DELETE /customers/${id} - Deleting customer`);
+    this.logger.log(`DELETE /customers/${id} - Deleting customer`);
     await this.customersService.remove(id);
-    this.logger.log(`✅ Customer deleted successfully: ${id}`);
+    this.logger.log(`Customer deleted successfully: ${id}`);
     return ApiResponse.success(null, 'Customer deleted successfully');
   }
 }

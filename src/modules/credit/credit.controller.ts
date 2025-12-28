@@ -39,9 +39,9 @@ export class CreditController {
   @ApiResponseDecorator({ status: 400, description: 'Invalid input data' })
   @ApiResponseDecorator({ status: 404, description: 'Customer not found' })
   async assessCredit(@Body() assessCreditDto: AssessCreditDto) {
-    this.logger.log(`📝 POST /credit/assess - Assessing credit for customer: ${assessCreditDto.customerId}`);
+    this.logger.log(`POST /credit/assess - Assessing credit for customer: ${assessCreditDto.customerId}`);
     const assessment = await this.creditService.assessCredit(assessCreditDto);
-    this.logger.log(`✅ Assessment completed: ${assessment.decision} | Score: ${assessment.totalScore}`);
+    this.logger.log(`Assessment completed: ${assessment.decision} | Score: ${assessment.totalScore}`);
     return ApiResponse.success(
       assessment,
       'Credit assessment completed successfully',
@@ -59,9 +59,9 @@ export class CreditController {
   })
   @ApiResponseDecorator({ status: 404, description: 'Assessment not found' })
   async findOne(@Param('id') id: string) {
-    this.logger.log(`🔍 GET /credit/${id} - Fetching assessment`);
+    this.logger.log(`GET /credit/${id} - Fetching assessment`);
     const assessment = await this.creditService.findOne(id);
-    this.logger.log(`✅ Assessment found for customer: ${assessment.customerId}`);
+    this.logger.log(`Assessment found for customer: ${assessment.customerId}`);
     return ApiResponse.success(assessment, 'Assessment retrieved successfully');
   }
 
@@ -75,9 +75,9 @@ export class CreditController {
     description: 'Customer assessments retrieved successfully',
   })
   async findByCustomer(@Param('customerId') customerId: string) {
-    this.logger.log(`📋 GET /credit/customer/${customerId} - Fetching customer assessments`);
+    this.logger.log(`GET /credit/customer/${customerId} - Fetching customer assessments`);
     const assessments = await this.creditService.findByCustomer(customerId);
-    this.logger.log(`✅ Found ${assessments.length} assessments for customer ${customerId}`);
+    this.logger.log(`Found ${assessments.length} assessments for customer ${customerId}`);
     return ApiResponse.success(
       assessments,
       'Customer assessments retrieved successfully',
@@ -94,9 +94,9 @@ export class CreditController {
     description: 'Merchant assessments retrieved successfully',
   })
   async findByMerchant(@Param('merchantId') merchantId: string) {
-    this.logger.log(`📋 GET /credit/merchant/${merchantId} - Fetching merchant assessments`);
+    this.logger.log(`GET /credit/merchant/${merchantId} - Fetching merchant assessments`);
     const assessments = await this.creditService.findByMerchant(merchantId);
-    this.logger.log(`✅ Found ${assessments.length} assessments for merchant ${merchantId}`);
+    this.logger.log(`Found ${assessments.length} assessments for merchant ${merchantId}`);
     return ApiResponse.success(
       assessments,
       'Merchant assessments retrieved successfully',
@@ -113,9 +113,9 @@ export class CreditController {
     description: 'Statistics retrieved successfully',
   })
   async getStats() {
-    this.logger.log('📊 GET /credit/stats/overview - Fetching assessment statistics');
+    this.logger.log('GET /credit/stats/overview - Fetching assessment statistics');
     const stats = await this.creditService.getStats();
-    this.logger.log(`✅ Statistics retrieved: Total=${stats.total}, Approved=${stats.instantApprovals + stats.conditionalApprovals}`);
+    this.logger.log(`Statistics retrieved: Total=${stats.total}, Approved=${stats.instantApprovals + stats.conditionalApprovals}`);
     return ApiResponse.success(
       stats,
       'Credit assessment statistics retrieved successfully',

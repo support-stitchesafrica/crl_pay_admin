@@ -144,19 +144,19 @@ export class MerchantsService {
 
   async approve(merchantId: string, approveMerchantDto: ApproveMerchantDto, adminId: string): Promise<Merchant> {
     try {
-      this.logger.log(`🔍 Processing approval for merchant ID: ${merchantId}`);
-      this.logger.log(`📋 New status: ${approveMerchantDto.status}`);
+      this.logger.log(`Processing approval for merchant ID: ${merchantId}`);
+      this.logger.log(`New status: ${approveMerchantDto.status}`);
 
       const merchantRef = this.merchantsCollection.doc(merchantId);
       const doc = await merchantRef.get();
 
       if (!doc.exists) {
-        this.logger.warn(`⚠️  Merchant not found: ${merchantId}`);
+        this.logger.warn(`Merchant not found: ${merchantId}`);
         throw new NotFoundException('Merchant not found');
       }
 
       const merchantData = doc.data() as Merchant;
-      this.logger.log(`📄 Current merchant: ${merchantData.businessName} (${merchantData.email})`);
+      this.logger.log(`Current merchant: ${merchantData.businessName} (${merchantData.email})`);
 
       const updateData: any = {
         status: approveMerchantDto.status,
@@ -165,7 +165,7 @@ export class MerchantsService {
 
       if (approveMerchantDto.notes) {
         updateData.adminNotes = approveMerchantDto.notes;
-        this.logger.log(`📝 Admin notes: ${approveMerchantDto.notes}`);
+        this.logger.log(`Admin notes: ${approveMerchantDto.notes}`);
       }
 
       // If approved, generate API keys
@@ -175,12 +175,12 @@ export class MerchantsService {
         updateData.apiSecret = generateApiSecret();
         updateData.approvedAt = new Date();
         updateData.approvedBy = adminId;
-        this.logger.log(`✅ API Key: ${updateData.apiKey}`);
-        this.logger.log(`🔐 API Secret: ${updateData.apiSecret.substring(0, 15)}...`);
+        this.logger.log(`API Key: ${updateData.apiKey}`);
+        this.logger.log(`API Secret: ${updateData.apiSecret.substring(0, 15)}...`);
       }
 
       await merchantRef.update(updateData);
-      this.logger.log(`✅ Merchant ${approveMerchantDto.status} successfully by admin ${adminId}`);
+      this.logger.log(`Merchant ${approveMerchantDto.status} successfully by admin ${adminId}`);
 
       // Send appropriate email based on status
       if (approveMerchantDto.status === 'approved') {
@@ -195,30 +195,30 @@ export class MerchantsService {
 
       return this.findOne(merchantId);
     } catch (error) {
-      this.logger.error('❌ Error approving merchant:', error);
+      this.logger.error('Error approving merchant:', error);
       throw error;
     }
   }
 
   async remove(merchantId: string): Promise<void> {
     try {
-      this.logger.log(`🗑️  Deleting merchant ID: ${merchantId}`);
+      this.logger.log(`Deleting merchant ID: ${merchantId}`);
 
       const merchantRef = this.merchantsCollection.doc(merchantId);
       const doc = await merchantRef.get();
 
       if (!doc.exists) {
-        this.logger.warn(`⚠️  Merchant not found: ${merchantId}`);
+        this.logger.warn(`Merchant not found: ${merchantId}`);
         throw new NotFoundException('Merchant not found');
       }
 
       const merchantData = doc.data() as Merchant;
-      this.logger.log(`📄 Deleting merchant: ${merchantData.businessName} (${merchantData.email})`);
+      this.logger.log(`Deleting merchant: ${merchantData.businessName} (${merchantData.email})`);
 
       await merchantRef.delete();
-      this.logger.log(`✅ Merchant deleted successfully: ${merchantId}`);
+      this.logger.log(`Merchant deleted successfully: ${merchantId}`);
     } catch (error) {
-      this.logger.error('❌ Error deleting merchant:', error);
+      this.logger.error('Error deleting merchant:', error);
       throw error;
     }
   }
@@ -231,7 +231,7 @@ export class MerchantsService {
     suspended: number;
   }> {
     try {
-      this.logger.log('📊 Calculating merchant statistics...');
+      this.logger.log('Calculating merchant statistics...');
 
       const allMerchants = await this.merchantsCollection.get();
 
@@ -249,10 +249,10 @@ export class MerchantsService {
         stats[merchant.status]++;
       });
 
-      this.logger.log(`✅ Stats: Total=${stats.total}, Pending=${stats.pending}, Approved=${stats.approved}, Rejected=${stats.rejected}, Suspended=${stats.suspended}`);
+      this.logger.log(`Stats: Total=${stats.total}, Pending=${stats.pending}, Approved=${stats.approved}, Rejected=${stats.rejected}, Suspended=${stats.suspended}`);
       return stats;
     } catch (error) {
-      this.logger.error('❌ Error calculating merchant stats:', error);
+      this.logger.error('Error calculating merchant stats:', error);
       throw error;
     }
   }

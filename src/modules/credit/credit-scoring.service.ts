@@ -46,7 +46,7 @@ export class CreditScoringService {
     deviceFingerprint?: string,
     ipAddress?: string,
   ): Promise<ScoringResult> {
-    this.logger.log(`🧮 Calculating credit score for customer: ${customer.customerId}`);
+    this.logger.log(`Calculating credit score for customer: ${customer.customerId}`);
 
     const decisionReasons: string[] = [];
     const riskFlags: string[] = [];
@@ -87,13 +87,13 @@ export class CreditScoringService {
     // Calculate total score
     const totalScore = identityScore + behavioralScore + financialScore + merchantScore + historyScore;
 
-    this.logger.log(`📊 Credit Score Breakdown:`);
-    this.logger.log(`   Identity: ${identityScore}/200`);
-    this.logger.log(`   Behavioral: ${behavioralScore}/200`);
-    this.logger.log(`   Financial: ${financialScore}/300`);
-    this.logger.log(`   Merchant: ${merchantScore}/100`);
-    this.logger.log(`   History: ${historyScore}/200`);
-    this.logger.log(`   TOTAL: ${totalScore}/1000`);
+    this.logger.log(`Credit Score Breakdown:`);
+    this.logger.log(`Identity: ${identityScore}/200`);
+    this.logger.log(`Behavioral: ${behavioralScore}/200`);
+    this.logger.log(`Financial: ${financialScore}/300`);
+    this.logger.log(`Merchant: ${merchantScore}/100`);
+    this.logger.log(`History: ${historyScore}/200`);
+    this.logger.log(`TOTAL: ${totalScore}/1000`);
 
     // Determine credit tier
     const creditTier = this.determineCreditTier(totalScore);
@@ -116,8 +116,8 @@ export class CreditScoringService {
       totalScore,
     );
 
-    this.logger.log(`✅ Final Decision: ${decision.toUpperCase()}`);
-    this.logger.log(`💰 Approved Amount: ₦${approvedAmount} for ${approvedTenure} weeks at ${interestRate}% monthly`);
+    this.logger.log(`Final Decision: ${decision.toUpperCase()}`);
+    this.logger.log(`Approved Amount: ₦${approvedAmount} for ${approvedTenure} weeks at ${interestRate}% monthly`);
 
     return {
       scores: {

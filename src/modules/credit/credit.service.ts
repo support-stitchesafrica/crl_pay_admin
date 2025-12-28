@@ -22,7 +22,7 @@ export class CreditService {
    * Perform comprehensive credit assessment
    */
   async assessCredit(assessCreditDto: AssessCreditDto): Promise<CreditAssessment> {
-    this.logger.log(`🔍 Starting credit assessment for customer: ${assessCreditDto.customerId}`);
+    this.logger.log(`Starting credit assessment for customer: ${assessCreditDto.customerId}`);
 
     try {
       // 1. Fetch customer data
@@ -31,7 +31,7 @@ export class CreditService {
         throw new NotFoundException('Customer not found');
       }
 
-      this.logger.log(`📋 Customer found: ${customer.firstName} ${customer.lastName}`);
+      this.logger.log(`Customer found: ${customer.firstName} ${customer.lastName}`);
 
       // 2. Run credit scoring algorithm
       const scoringResult = await this.creditScoringService.calculateCreditScore(
@@ -112,9 +112,9 @@ export class CreditService {
       // 4. Save to Firestore
       await assessmentRef.set(assessment);
 
-      this.logger.log(`✅ Credit assessment completed: ${assessment.decision.toUpperCase()}`);
-      this.logger.log(`📊 Score: ${assessment.totalScore}/1000 | Tier: ${assessment.creditTier.toUpperCase()}`);
-      this.logger.log(`💰 Approved: ₦${assessment.approvedAmount} for ${assessment.approvedTenure} weeks`);
+      this.logger.log(`Credit assessment completed: ${assessment.decision.toUpperCase()}`);
+      this.logger.log(`Score: ${assessment.totalScore}/1000 | Tier: ${assessment.creditTier.toUpperCase()}`);
+      this.logger.log(`Approved: ₦${assessment.approvedAmount} for ${assessment.approvedTenure} weeks`);
 
       // 5. Update customer credit profile
       if (assessment.decision !== 'declined') {
@@ -123,7 +123,7 @@ export class CreditService {
 
       return assessment;
     } catch (error) {
-      this.logger.error('❌ Error during credit assessment:', error);
+      this.logger.error('Error during credit assessment:', error);
       throw error;
     }
   }
@@ -133,20 +133,20 @@ export class CreditService {
    */
   async findOne(assessmentId: string): Promise<CreditAssessment> {
     try {
-      this.logger.log(`🔍 Fetching assessment ID: ${assessmentId}`);
+      this.logger.log(`Fetching assessment ID: ${assessmentId}`);
 
       const doc = await this.assessmentsCollection.doc(assessmentId).get();
 
       if (!doc.exists) {
-        this.logger.warn(`⚠️  Assessment not found: ${assessmentId}`);
+        this.logger.warn(`Assessment not found: ${assessmentId}`);
         throw new NotFoundException('Credit assessment not found');
       }
 
       const assessment = doc.data() as CreditAssessment;
-      this.logger.log(`✅ Assessment found for customer: ${assessment.customerId}`);
+      this.logger.log(`Assessment found for customer: ${assessment.customerId}`);
       return assessment;
     } catch (error) {
-      this.logger.error('❌ Error fetching assessment:', error);
+      this.logger.error('Error fetching assessment:', error);
       throw error;
     }
   }
@@ -156,7 +156,7 @@ export class CreditService {
    */
   async findByCustomer(customerId: string): Promise<CreditAssessment[]> {
     try {
-      this.logger.log(`📋 Fetching assessments for customer: ${customerId}`);
+      this.logger.log(`Fetching assessments for customer: ${customerId}`);
 
       const snapshot = await this.assessmentsCollection
         .where('customerId', '==', customerId)
@@ -168,10 +168,10 @@ export class CreditService {
         assessments.push(doc.data() as CreditAssessment);
       });
 
-      this.logger.log(`✅ Found ${assessments.length} assessments for customer ${customerId}`);
+      this.logger.log(`Found ${assessments.length} assessments for customer ${customerId}`);
       return assessments;
     } catch (error) {
-      this.logger.error('❌ Error fetching customer assessments:', error);
+      this.logger.error('Error fetching customer assessments:', error);
       throw error;
     }
   }
@@ -181,7 +181,7 @@ export class CreditService {
    */
   async findByMerchant(merchantId: string): Promise<CreditAssessment[]> {
     try {
-      this.logger.log(`📋 Fetching assessments for merchant: ${merchantId}`);
+      this.logger.log(`Fetching assessments for merchant: ${merchantId}`);
 
       const snapshot = await this.assessmentsCollection
         .where('merchantId', '==', merchantId)
@@ -193,10 +193,10 @@ export class CreditService {
         assessments.push(doc.data() as CreditAssessment);
       });
 
-      this.logger.log(`✅ Found ${assessments.length} assessments for merchant ${merchantId}`);
+      this.logger.log(`Found ${assessments.length} assessments for merchant ${merchantId}`);
       return assessments;
     } catch (error) {
-      this.logger.error('❌ Error fetching merchant assessments:', error);
+      this.logger.error('Error fetching merchant assessments:', error);
       throw error;
     }
   }
@@ -213,7 +213,7 @@ export class CreditService {
     averageScore: number;
   }> {
     try {
-      this.logger.log('📊 Calculating assessment statistics...');
+      this.logger.log('Calculating assessment statistics...');
 
       const snapshot = await this.assessmentsCollection.get();
 
@@ -251,10 +251,10 @@ export class CreditService {
 
       stats.averageScore = stats.total > 0 ? Math.round(totalScore / stats.total) : 0;
 
-      this.logger.log(`✅ Stats: Total=${stats.total}, Approved=${stats.instantApprovals + stats.conditionalApprovals}, Declined=${stats.declined}`);
+      this.logger.log(`Stats: Total=${stats.total}, Approved=${stats.instantApprovals + stats.conditionalApprovals}, Declined=${stats.declined}`);
       return stats;
     } catch (error) {
-      this.logger.error('❌ Error calculating stats:', error);
+      this.logger.error('Error calculating stats:', error);
       throw error;
     }
   }
@@ -288,9 +288,9 @@ export class CreditService {
         creditTier: assessment.creditTier,
       });
 
-      this.logger.log(`✅ Updated customer credit profile: Score=${assessment.totalScore}, Tier=${assessment.creditTier}`);
+      this.logger.log(`Updated customer credit profile: Score=${assessment.totalScore}, Tier=${assessment.creditTier}`);
     } catch (error) {
-      this.logger.error('⚠️  Failed to update customer credit profile:', error);
+      this.logger.error('Failed to update customer credit profile:', error);
       // Don't throw - this is not critical
     }
   }

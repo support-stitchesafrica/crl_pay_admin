@@ -18,7 +18,7 @@ export class PushService {
   }): Promise<void> {
     try {
       await this.sendPushNotification(data.deviceToken, {
-        title: '⏰ Payment Reminder',
+        title: 'Payment Reminder',
         body: `Your payment of ₦${data.amountDue.toLocaleString()} is due in ${data.hoursRemaining} hours`,
         data: {
           type: 'payment_reminder',
@@ -48,7 +48,7 @@ export class PushService {
         : `Payment of ₦${data.amountPaid.toLocaleString()} successful. Loan fully paid!`;
 
       await this.sendPushNotification(data.deviceToken, {
-        title: '✅ Payment Successful',
+        title: 'Payment Successful',
         body,
         data: {
           type: 'payment_success',
@@ -74,7 +74,7 @@ export class PushService {
   }): Promise<void> {
     try {
       await this.sendPushNotification(data.deviceToken, {
-        title: '❌ Payment Failed',
+        title: 'Payment Failed',
         body: `Payment of ₦${data.amountDue.toLocaleString()} failed. ${data.failureReason}`,
         data: {
           type: 'payment_failure',
@@ -101,7 +101,7 @@ export class PushService {
   }): Promise<void> {
     try {
       await this.sendPushNotification(data.deviceToken, {
-        title: '⚠️ URGENT: Payment Overdue',
+        title: 'URGENT: Payment Overdue',
         body: `Your payment is ${data.daysOverdue} days overdue. Total: ₦${data.totalAmountDue.toLocaleString()}`,
         data: {
           type: 'payment_overdue',
@@ -127,7 +127,7 @@ export class PushService {
   }): Promise<void> {
     try {
       await this.sendPushNotification(data.deviceToken, {
-        title: '🎉 Congratulations!',
+        title: 'Congratulations!',
         body: `You've fully repaid your loan of ₦${data.totalPaid.toLocaleString()}!`,
         data: {
           type: 'loan_completion',

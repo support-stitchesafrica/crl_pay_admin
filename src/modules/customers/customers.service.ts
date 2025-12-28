@@ -15,7 +15,7 @@ export class CustomersService {
 
   async create(createCustomerDto: CreateCustomerDto): Promise<Customer> {
     try {
-      this.logger.log(`📝 Creating new customer: ${createCustomerDto.firstName} ${createCustomerDto.lastName} (${createCustomerDto.email})`);
+      this.logger.log(`Creating new customer: ${createCustomerDto.firstName} ${createCustomerDto.lastName} (${createCustomerDto.email})`);
 
       // Check if customer with email or phone already exists
       const existingByEmail = await this.customersCollection
@@ -23,7 +23,7 @@ export class CustomersService {
         .get();
 
       if (!existingByEmail.empty) {
-        this.logger.warn(`⚠️  Customer registration failed: Email ${createCustomerDto.email} already exists`);
+        this.logger.warn(`Customer registration failed: Email ${createCustomerDto.email} already exists`);
         throw new ConflictException('Customer with this email already exists');
       }
 
@@ -32,7 +32,7 @@ export class CustomersService {
         .get();
 
       if (!existingByPhone.empty) {
-        this.logger.warn(`⚠️  Customer registration failed: Phone ${createCustomerDto.phone} already exists`);
+        this.logger.warn(`Customer registration failed: Phone ${createCustomerDto.phone} already exists`);
         throw new ConflictException('Customer with this phone number already exists');
       }
 
@@ -42,7 +42,7 @@ export class CustomersService {
         .get();
 
       if (!existingByBVN.empty) {
-        this.logger.warn(`⚠️  Customer registration failed: BVN already registered`);
+        this.logger.warn(`Customer registration failed: BVN already registered`);
         throw new ConflictException('This BVN is already registered');
       }
 
@@ -84,19 +84,19 @@ export class CustomersService {
       };
 
       await customerRef.set(customer);
-      this.logger.log(`✅ Customer created successfully: ${customer.firstName} ${customer.lastName} (ID: ${customerId})`);
-      this.logger.log(`📊 Registered via merchant: ${createCustomerDto.merchantId}`);
+      this.logger.log(`Customer created successfully: ${customer.firstName} ${customer.lastName} (ID: ${customerId})`);
+      this.logger.log(`Registered via merchant: ${createCustomerDto.merchantId}`);
 
       return customer;
     } catch (error) {
-      this.logger.error('❌ Error creating customer:', error);
+      this.logger.error('Error creating customer:', error);
       throw error;
     }
   }
 
   async findAll(): Promise<Customer[]> {
     try {
-      this.logger.log('📋 Fetching all customers...');
+      this.logger.log('Fetching all customers...');
 
       const snapshot = await this.customersCollection.orderBy('createdAt', 'desc').get();
       const customers: Customer[] = [];
@@ -105,30 +105,30 @@ export class CustomersService {
         customers.push(doc.data() as Customer);
       });
 
-      this.logger.log(`✅ Retrieved ${customers.length} customers`);
+      this.logger.log(`Retrieved ${customers.length} customers`);
       return customers;
     } catch (error) {
-      this.logger.error('❌ Error fetching customers:', error);
+      this.logger.error('Error fetching customers:', error);
       throw error;
     }
   }
 
   async findOne(customerId: string): Promise<Customer> {
     try {
-      this.logger.log(`🔍 Fetching customer ID: ${customerId}`);
+      this.logger.log(`Fetching customer ID: ${customerId}`);
 
       const doc = await this.customersCollection.doc(customerId).get();
 
       if (!doc.exists) {
-        this.logger.warn(`⚠️  Customer not found: ${customerId}`);
+        this.logger.warn(`Customer not found: ${customerId}`);
         throw new NotFoundException('Customer not found');
       }
 
       const customer = doc.data() as Customer;
-      this.logger.log(`✅ Customer found: ${customer.firstName} ${customer.lastName}`);
+      this.logger.log(`Customer found: ${customer.firstName} ${customer.lastName}`);
       return customer;
     } catch (error) {
-      this.logger.error('❌ Error fetching customer:', error);
+      this.logger.error('Error fetching customer:', error);
       throw error;
     }
   }
@@ -143,7 +143,7 @@ export class CustomersService {
 
       return snapshot.docs[0].data() as Customer;
     } catch (error) {
-      this.logger.error('❌ Error finding customer by email:', error);
+      this.logger.error('Error finding customer by email:', error);
       throw error;
     }
   }
@@ -158,14 +158,14 @@ export class CustomersService {
 
       return snapshot.docs[0].data() as Customer;
     } catch (error) {
-      this.logger.error('❌ Error finding customer by BVN:', error);
+      this.logger.error('Error finding customer by BVN:', error);
       throw error;
     }
   }
 
   async findByMerchant(merchantId: string): Promise<Customer[]> {
     try {
-      this.logger.log(`📋 Fetching customers for merchant: ${merchantId}`);
+      this.logger.log(`Fetching customers for merchant: ${merchantId}`);
 
       const snapshot = await this.customersCollection
         .where('registeredVia', '==', merchantId)
@@ -177,23 +177,23 @@ export class CustomersService {
         customers.push(doc.data() as Customer);
       });
 
-      this.logger.log(`✅ Found ${customers.length} customers for merchant ${merchantId}`);
+      this.logger.log(`Found ${customers.length} customers for merchant ${merchantId}`);
       return customers;
     } catch (error) {
-      this.logger.error('❌ Error fetching customers by merchant:', error);
+      this.logger.error('Error fetching customers by merchant:', error);
       throw error;
     }
   }
 
   async update(customerId: string, updateCustomerDto: UpdateCustomerDto): Promise<Customer> {
     try {
-      this.logger.log(`📝 Updating customer ID: ${customerId}`);
+      this.logger.log(`Updating customer ID: ${customerId}`);
 
       const customerRef = this.customersCollection.doc(customerId);
       const doc = await customerRef.get();
 
       if (!doc.exists) {
-        this.logger.warn(`⚠️  Customer not found: ${customerId}`);
+        this.logger.warn(`Customer not found: ${customerId}`);
         throw new NotFoundException('Customer not found');
       }
 
@@ -202,23 +202,23 @@ export class CustomersService {
         updatedAt: new Date(),
       });
 
-      this.logger.log(`✅ Customer updated successfully: ${customerId}`);
+      this.logger.log(`Customer updated successfully: ${customerId}`);
       return this.findOne(customerId);
     } catch (error) {
-      this.logger.error('❌ Error updating customer:', error);
+      this.logger.error('Error updating customer:', error);
       throw error;
     }
   }
 
   async updateCreditProfile(customerId: string, profileUpdates: Partial<Customer>): Promise<Customer> {
     try {
-      this.logger.log(`📊 Updating credit profile for customer: ${customerId}`);
+      this.logger.log(`Updating credit profile for customer: ${customerId}`);
 
       const customerRef = this.customersCollection.doc(customerId);
       const doc = await customerRef.get();
 
       if (!doc.exists) {
-        this.logger.warn(`⚠️  Customer not found: ${customerId}`);
+        this.logger.warn(`Customer not found: ${customerId}`);
         throw new NotFoundException('Customer not found');
       }
 
@@ -227,24 +227,24 @@ export class CustomersService {
         updatedAt: new Date(),
       });
 
-      this.logger.log(`✅ Credit profile updated for customer: ${customerId}`);
+      this.logger.log(`Credit profile updated for customer: ${customerId}`);
       return this.findOne(customerId);
     } catch (error) {
-      this.logger.error('❌ Error updating credit profile:', error);
+      this.logger.error('Error updating credit profile:', error);
       throw error;
     }
   }
 
   async blacklist(customerId: string, reason: string): Promise<Customer> {
     try {
-      this.logger.log(`🚫 Blacklisting customer: ${customerId}`);
-      this.logger.log(`📝 Reason: ${reason}`);
+      this.logger.log(`Blacklisting customer: ${customerId}`);
+      this.logger.log(`Reason: ${reason}`);
 
       const customerRef = this.customersCollection.doc(customerId);
       const doc = await customerRef.get();
 
       if (!doc.exists) {
-        this.logger.warn(`⚠️  Customer not found: ${customerId}`);
+        this.logger.warn(`Customer not found: ${customerId}`);
         throw new NotFoundException('Customer not found');
       }
 
@@ -254,23 +254,23 @@ export class CustomersService {
         updatedAt: new Date(),
       });
 
-      this.logger.log(`✅ Customer blacklisted: ${customerId}`);
+      this.logger.log(`Customer blacklisted: ${customerId}`);
       return this.findOne(customerId);
     } catch (error) {
-      this.logger.error('❌ Error blacklisting customer:', error);
+      this.logger.error('Error blacklisting customer:', error);
       throw error;
     }
   }
 
   async remove(customerId: string): Promise<void> {
     try {
-      this.logger.log(`🗑️  Deleting customer ID: ${customerId}`);
+      this.logger.log(`Deleting customer ID: ${customerId}`);
 
       const customerRef = this.customersCollection.doc(customerId);
       const doc = await customerRef.get();
 
       if (!doc.exists) {
-        this.logger.warn(`⚠️  Customer not found: ${customerId}`);
+        this.logger.warn(`Customer not found: ${customerId}`);
         throw new NotFoundException('Customer not found');
       }
 
@@ -278,16 +278,16 @@ export class CustomersService {
 
       // Check if customer has active loans
       if (customerData.activeLoans > 0) {
-        this.logger.warn(`⚠️  Cannot delete customer with active loans: ${customerId}`);
+        this.logger.warn(`Cannot delete customer with active loans: ${customerId}`);
         throw new BadRequestException('Cannot delete customer with active loans');
       }
 
-      this.logger.log(`📄 Deleting customer: ${customerData.firstName} ${customerData.lastName} (${customerData.email})`);
+      this.logger.log(`Deleting customer: ${customerData.firstName} ${customerData.lastName} (${customerData.email})`);
 
       await customerRef.delete();
-      this.logger.log(`✅ Customer deleted successfully: ${customerId}`);
+      this.logger.log(`Customer deleted successfully: ${customerId}`);
     } catch (error) {
-      this.logger.error('❌ Error deleting customer:', error);
+      this.logger.error('Error deleting customer:', error);
       throw error;
     }
   }
@@ -300,7 +300,7 @@ export class CustomersService {
     withActiveLoans: number;
   }> {
     try {
-      this.logger.log('📊 Calculating customer statistics...');
+      this.logger.log('Calculating customer statistics...');
 
       const allCustomers = await this.customersCollection.get();
 
@@ -321,10 +321,10 @@ export class CustomersService {
         }
       });
 
-      this.logger.log(`✅ Stats: Total=${stats.total}, Active=${stats.active}, Suspended=${stats.suspended}, Blacklisted=${stats.blacklisted}, WithActiveLoans=${stats.withActiveLoans}`);
+      this.logger.log(`Stats: Total=${stats.total}, Active=${stats.active}, Suspended=${stats.suspended}, Blacklisted=${stats.blacklisted}, WithActiveLoans=${stats.withActiveLoans}`);
       return stats;
     } catch (error) {
-      this.logger.error('❌ Error calculating customer stats:', error);
+      this.logger.error('Error calculating customer stats:', error);
       throw error;
     }
   }

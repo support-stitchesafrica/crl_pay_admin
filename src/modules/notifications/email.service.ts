@@ -232,7 +232,7 @@ export class EmailService {
         hoursRemaining: data.hoursRemaining,
       });
 
-      await this.sendEmail(data.customerEmail, '⏰ Payment Reminder - CRL Pay', html);
+      await this.sendEmail(data.customerEmail, 'Payment Reminder - CRL Pay', html);
 
       this.logger.log(`Payment reminder sent to: ${data.customerEmail}`);
     } catch (error) {
@@ -267,7 +267,7 @@ export class EmailService {
         nextPaymentDate: data.nextPaymentDate,
       });
 
-      await this.sendEmail(data.customerEmail, '✅ Payment Successful - CRL Pay', html);
+      await this.sendEmail(data.customerEmail, 'Payment Successful - CRL Pay', html);
 
       this.logger.log(`Payment success email sent to: ${data.customerEmail}`);
     } catch (error) {
@@ -300,7 +300,7 @@ export class EmailService {
         retryDate: data.retryDate,
       });
 
-      await this.sendEmail(data.customerEmail, '❌ Payment Failed - Action Required', html);
+      await this.sendEmail(data.customerEmail, 'Payment Failed - Action Required', html);
 
       this.logger.log(`Payment failure email sent to: ${data.customerEmail}`);
     } catch (error) {
@@ -331,7 +331,7 @@ export class EmailService {
         merchantName: data.merchantName,
       });
 
-      await this.sendEmail(data.customerEmail, '🎉 Congratulations! Loan Fully Repaid', html);
+      await this.sendEmail(data.customerEmail, 'Congratulations! Loan Fully Repaid', html);
 
       this.logger.log(`Loan completion email sent to: ${data.customerEmail}`);
     } catch (error) {
@@ -366,7 +366,7 @@ export class EmailService {
         merchantName: data.merchantName,
       });
 
-      await this.sendEmail(data.customerEmail, '⚠️ URGENT: Overdue Payment - Immediate Action Required', html);
+      await this.sendEmail(data.customerEmail, 'URGENT: Overdue Payment - Immediate Action Required', html);
 
       this.logger.log(`Overdue payment email sent to: ${data.customerEmail}`);
     } catch (error) {
