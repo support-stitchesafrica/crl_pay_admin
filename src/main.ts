@@ -55,13 +55,11 @@ async function bootstrap() {
     .setDescription('API documentation for CRL Pay Buy Now Pay Later (BNPL) System')
     .setVersion('1.0')
     .addBearerAuth()
-    .addTag('Merchants', 'Merchant onboarding and management')
-    .addTag('Customers', 'Customer onboarding and profile management')
-    .addTag('Credit', 'Credit assessment and decisioning')
-    .addTag('Loans', 'Loan management and lifecycle')
-    .addTag('Payments', 'Payment processing and collection')
-    .addTag('Webhooks', 'Webhook management')
-    .addTag('Analytics', 'Merchant analytics and reporting')
+    // .addTag('Merchants', 'Merchant onboarding and management')
+    // .addTag('Customers', 'Customer onboarding and profile management')
+    // .addTag('Payments', 'Payment processing and collection')
+    // .addTag('Webhooks', 'Webhook management')
+    // .addTag('Analytics', 'Merchant analytics and reporting')
     .build();
 
   const document = SwaggerModule.createDocument(app, config);

@@ -17,7 +17,7 @@ import { UpdateLoanDto, AuthorizeCardDto, RecordPaymentDto } from './dto/update-
 import { ApiResponse } from '../../common/helpers/response.helper';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
-@ApiTags('loans')
+@ApiTags('Loans')
 @Controller('loans')
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth()

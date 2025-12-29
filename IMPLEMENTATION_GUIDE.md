@@ -511,56 +511,50 @@ nest g service modules/merchants
   - Configuration stored per merchant in Firestore
   - Default values can be set on merchant approval
 
-**Merchant Loan Configuration Schema:**
+**Merchant Loan Configuration Schema:** ✅ IMPLEMENTED
 
-Each merchant has their own loan configuration stored in their Firestore document:
+Merchants can have multiple loan configurations stored in `crl_merchant_loan_configs` collection:
 
 ```typescript
-interface MerchantLoanConfig {
-  // Interest rate configuration (percentage per payment period)
-  interestRate: number;              // e.g., 2.5 (means 2.5% per period)
+interface MerchantLoanConfiguration {
+  configId: string;
+  merchantId: string;
+  name: string;                      // e.g., "Standard Plan", "Quick Cash"
+  description?: string;
 
-  // Maximum amounts by tier/duration
-  maxLoanAmounts: {
-    bronze: number;                  // Max for 30-day loans (e.g., 50000)
-    silver: number;                  // Max for 60-day loans (e.g., 100000)
-    gold: number;                    // Max for 90-day loans (e.g., 200000)
-  };
+  // Rate Configuration
+  interestRate: number;              // Annual interest rate (e.g., 15 for 15%)
+  penaltyRate: number;               // Late payment penalty (e.g., 5 for 5%)
 
-  // Payment period configuration
-  defaultPaymentFrequency: 'weekly' | 'bi-weekly' | 'monthly';
+  // Loan Limits
+  minLoanAmount: number;             // e.g., 5000
+  maxLoanAmount: number;             // e.g., 500000
 
-  // Risk tolerance
-  minCreditScore: number;            // Minimum credit score to approve (e.g., 500)
+  // Allowed Frequencies
+  allowedFrequencies: RepaymentFrequency[];  // ['weekly', 'bi-weekly', 'monthly']
 
-  // Auto-approve limits
-  autoApproveLimit: number;          // Max amount for instant approval (e.g., 10000)
+  // Allowed Tenors
+  allowedTenors: {
+    minValue: number;
+    maxValue: number;
+    period: 'DAYS' | 'WEEKS' | 'MONTHS' | 'YEARS';
+  }[];
 
-  // Updated by merchant
+  // Status
+  isActive: boolean;
+
+  // Timestamps
+  createdAt: Date;
   updatedAt: Date;
 }
 ```
 
-**Implementation Files Needed:**
-- `src/modules/merchants/dto/update-loan-config.dto.ts` - DTO for loan config updates
-- Add to `merchants.controller.ts`:
-  ```typescript
-  @Patch(':id/loan-config')
-  async updateLoanConfig(
-    @Param('id') merchantId: string,
-    @Body() updateLoanConfigDto: UpdateLoanConfigDto
-  ) { ... }
-
-  @Get(':id/loan-config')
-  async getLoanConfig(@Param('id') merchantId: string) { ... }
-  ```
-
-**API Endpoints:**
-- `PATCH /merchants/:id/loan-config` - Update merchant loan configuration
-- `GET /merchants/:id/loan-config` - Get merchant loan configuration
+**Implementation Files:**
+- `src/entities/loan.entity.ts` ✅ - Contains `MerchantLoanConfiguration` interface
+- Stored in Firestore collection: `crl_merchant_loan_configs`
 
 **Dashboard Integration:**
-Merchants can configure these settings in their dashboard under Settings > Loan Configuration
+Merchants can configure loan products in their dashboard under Settings > Loan Configuration
 
 **1.2 Customer Module**
 ```bash
@@ -738,56 +732,162 @@ nest g service modules/notifications
 - [ ] Payment success/failure → Ready for Payments module integration
 - [ ] Loan completion → Ready for Loans module integration
 
-**5.2 Webhook Module**
+**5.2 Webhook Module** ✅ COMPLETED
 ```bash
 nest g module modules/webhooks
 nest g controller modules/webhooks
 nest g service modules/webhooks
 ```
 
+**Files created:**
+- `src/entities/webhook.entity.ts` ✅ - Webhook types and interfaces
+- `src/modules/webhooks/dto/create-webhook.dto.ts` ✅ - Create/Update webhook DTOs
+- `src/modules/webhooks/webhooks.service.ts` ✅ - Webhook management and delivery
+- `src/modules/webhooks/webhooks.controller.ts` ✅ - RESTful endpoints
+- `src/modules/webhooks/webhook-delivery.service.ts` ✅ - Delivery with retry logic
+
+**Webhook Events:**
+| Event | Description |
+|-------|-------------|
+| `loan.created` | New loan created |
+| `loan.activated` | Loan activated (card authorized) |
+| `loan.completed` | Loan fully paid |
+| `loan.defaulted` | Loan marked as defaulted |
+| `loan.cancelled` | Loan cancelled |
+| `payment.pending` | Payment scheduled |
+| `payment.success` | Payment successful |
+| `payment.failed` | Payment failed |
+| `payment.overdue` | Payment overdue |
+| `customer.created` | New customer onboarded |
+| `credit.approved` | Credit assessment approved |
+| `credit.declined` | Credit assessment declined |
+
 **Key Features:**
-- [ ] Webhook subscription management
-- [ ] Event publishing
-- [ ] Retry logic for failed webhooks
-- [ ] Webhook signature verification
-- [ ] Event types (loan.created, payment.success, etc.)
+- [x] Webhook subscription management (CRUD)
+- [x] Event publishing to merchant endpoints
+- [x] Retry logic for failed webhooks (5 attempts with exponential backoff)
+- [x] Webhook signature verification (HMAC-SHA256)
+- [x] Delivery logging and tracking
+- [x] Health monitoring (consecutive failures tracking)
+
+**API Endpoints:**
+- `POST /webhooks` - Create webhook subscription
+- `GET /webhooks` - List merchant's webhooks
+- `GET /webhooks/:id` - Get webhook details
+- `PATCH /webhooks/:id` - Update webhook
+- `DELETE /webhooks/:id` - Delete webhook
+- `POST /webhooks/:id/test` - Send test webhook
+- `GET /webhooks/:id/deliveries` - Get delivery history
+
+**Retry Strategy:**
+| Attempt | Delay |
+|---------|-------|
+| 1 | Immediate |
+| 2 | 5 minutes |
+| 3 | 30 minutes |
+| 4 | 2 hours |
+| 5 | 24 hours |
+
+**Signature Verification:**
+Merchants verify webhook authenticity using HMAC-SHA256:
+```javascript
+const crypto = require('crypto');
+const signature = req.headers['x-crlpay-signature'];
+const payload = JSON.stringify(req.body);
+const expectedSignature = crypto
+  .createHmac('sha256', webhookSecret)
+  .update(payload)
+  .digest('hex');
+const isValid = signature === expectedSignature;
+```
 
 ### Phase 3: Analytics & Collection (Weeks 6-7)
 
 #### Week 6: Default Management
 
-**6.1 Defaults Module**
+**6.1 Defaults Module** ✅ COMPLETED
 ```bash
 nest g module modules/defaults
 nest g controller modules/defaults
 nest g service modules/defaults
 ```
 
+**Files created:**
+- `src/entities/default.entity.ts` ✅ - Default types, escalation levels, payment plans
+- `src/modules/defaults/dto/default.dto.ts` ✅ - DTOs for default operations
+- `src/modules/defaults/defaults.service.ts` ✅ - Default management with auto-escalation
+- `src/modules/defaults/defaults.controller.ts` ✅ - RESTful endpoints
+- `src/modules/defaults/defaults.module.ts` ✅ - Module registration
+
+**Escalation Levels:**
+| Level | Days Overdue | Actions |
+|-------|--------------|---------|
+| Low | 1-7 days | SMS/Email reminders |
+| Medium | 8-14 days | Phone calls, increased frequency |
+| High | 15-30 days | Formal notices, payment plan offers |
+| Critical | 31-60 days | Legal notices, credit bureau warning |
+| Terminal | 61+ days | Credit bureau reporting, legal action |
+
 **Key Features:**
-- [ ] Overdue payment tracking
-- [ ] Escalation logic (Low → Medium → High → Critical → Terminal)
-- [ ] Collection workflows
-- [ ] Late fee calculation
-- [ ] Credit bureau reporting integration
-- [ ] Payment plan restructuring
+- [x] Overdue payment tracking (daily cron job at 6 AM)
+- [x] Escalation logic (Low → Medium → High → Critical → Terminal)
+- [x] Collection workflows (contact attempts tracking)
+- [x] Late fee calculation (0.1% daily after 3-day grace, capped at 10%)
+- [x] Credit bureau reporting integration (ready for API)
+- [x] Payment plan restructuring
+
+**API Endpoints:**
+- `GET /defaults` - List defaults with filters
+- `GET /defaults/stats` - Get default statistics
+- `GET /defaults/:id` - Get default by ID
+- `GET /defaults/loan/:loanId` - Get default by loan ID
+- `PATCH /defaults/:id` - Update default
+- `POST /defaults/:id/contact` - Record contact attempt
+- `POST /defaults/:id/payment-plan` - Create payment plan
+- `POST /defaults/:id/report-credit-bureau` - Report to credit bureau
+- `POST /defaults/:id/write-off` - Write off default
+- `POST /defaults/:id/resolve` - Resolve default
 
 #### Week 7: Analytics Module
 
-**7.1 Analytics**
+**7.1 Analytics** ✅ COMPLETED
 ```bash
 nest g module modules/analytics
 nest g controller modules/analytics
 nest g service modules/analytics
 ```
 
+**Files created:**
+- `src/entities/analytics.entity.ts` ✅ - Analytics types and interfaces
+- `src/modules/analytics/dto/analytics.dto.ts` ✅ - Query DTOs
+- `src/modules/analytics/analytics.service.ts` ✅ - Analytics calculations
+- `src/modules/analytics/analytics.controller.ts` ✅ - RESTful endpoints
+- `src/modules/analytics/analytics.module.ts` ✅ - Module registration
+
 **Key Features:**
-- [ ] Merchant dashboard APIs
-- [ ] Transaction analytics
-- [ ] Customer analytics
-- [ ] Collection rate metrics
-- [ ] Default rate tracking
-- [ ] Revenue reporting
-- [ ] Performance metrics
+- [x] Merchant dashboard APIs (summary with trends)
+- [x] Transaction analytics (approval rates, volumes)
+- [x] Customer analytics (credit scores, top customers)
+- [x] Collection rate metrics
+- [x] Default rate tracking
+- [x] Revenue reporting (interest, fees, late fees breakdown)
+- [x] Performance metrics (time series data for charts)
+- [x] Daily analytics aggregation (cron job at midnight)
+
+**API Endpoints:**
+- `GET /analytics/dashboard` - Dashboard summary with trends
+- `GET /analytics/loans/distribution` - Loan distribution by status/frequency/tenor/amount
+- `GET /analytics/time-series` - Time series data for charts
+- `GET /analytics/customers` - Customer analytics
+- `GET /analytics/revenue` - Revenue breakdown
+
+**Dashboard Metrics:**
+- Total/Active/Completed/Defaulted loans
+- Total disbursed/collected/outstanding
+- Approval rate, collection rate, default rate
+- Revenue (interest + fees)
+- Period-over-period trends
+- Recent activity (last 7 days)
 
 ### Phase 4: Webview Implementation (Weeks 8-9)
 

@@ -11,11 +11,11 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse as ApiResponseDecorator, ApiBearerAuth } from '@nestjs/swagger';
 import { PaymentsService } from './payments.service';
-import { ProcessPaymentDto, RetryPaymentDto, VerifyPaymentDto } from './dto/process-payment.dto';
+import { ProcessPaymentDto } from './dto/process-payment.dto';
 import { ApiResponse } from '../../common/helpers/response.helper';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
-@ApiTags('payments')
+@ApiTags('Payments')
 @Controller('payments')
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth()

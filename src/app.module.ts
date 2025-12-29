@@ -10,6 +10,9 @@ import { CustomersModule } from './modules/customers/customers.module';
 import { CreditModule } from './modules/credit/credit.module';
 import { LoansModule } from './modules/loans/loans.module';
 import { PaymentsModule } from './modules/payments/payments.module';
+import { WebhooksModule } from './modules/webhooks/webhooks.module';
+import { DefaultsModule } from './modules/defaults/defaults.module';
+import { AnalyticsModule } from './modules/analytics/analytics.module';
 
 @Module({
   imports: [
@@ -25,6 +28,9 @@ import { PaymentsModule } from './modules/payments/payments.module';
     CreditModule,
     LoansModule,
     PaymentsModule,
+    WebhooksModule,
+    DefaultsModule,
+    AnalyticsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -14,6 +14,8 @@ This document describes the Firebase Firestore database schema for the CRL Pay B
 8. **crl_merchant_settlements** - Merchant payment settlements
 9. **crl_defaults** - Default management and collection tracking
 10. **crl_merchant_analytics** - Aggregated analytics data
+11. **crl_merchant_loan_configs** - Merchant-specific loan configurations
+12. **crl_webhooks** - Webhook subscriptions and delivery logs
 
 ---
 
@@ -228,7 +230,7 @@ Records of credit assessment decisions for audit and improvement.
 
 ## 4. Collection: `crl_loans`
 
-Active and historical loan records.
+Active and historical loan records with flexible tenor and frequency configuration.
 
 ### Document Structure
 
@@ -237,47 +239,101 @@ Active and historical loan records.
   loanId: string;                  // Unique loan ID (document ID)
   customerId: string;
   merchantId: string;
-  transactionReference: string;    // Merchant's transaction reference
 
   // Loan Details
   principalAmount: number;         // Original amount borrowed
-  interestRate: number;            // Monthly interest rate (%)
-  totalAmount: number;             // Principal + interest
-  installmentAmount: number;       // Per-installment amount
-  numberOfInstallments: number;    // Total installments
-  paidInstallments: number;        // Installments paid so far
-  remainingBalance: number;        // Current outstanding balance
 
-  // Payment Plan
-  paymentPlan: 'bronze' | 'silver' | 'gold' | 'platinum';
+  // Loan Configuration (calculated at creation)
+  configuration: {
+    frequency: 'daily' | 'weekly' | 'bi-weekly' | 'monthly' | 'quarterly' | 'bi-annually' | 'annually';
+    tenor: {
+      value: number;               // e.g., 6, 12, 90
+      period: 'DAYS' | 'WEEKS' | 'MONTHS' | 'YEARS';
+    };
+    numberOfInstallments: number;  // Calculated based on tenor and frequency
+    interestRate: number;          // Annual percentage rate (e.g., 15 for 15%)
+    penaltyRate: number;           // Late payment penalty percentage
+    installmentAmount: number;     // Per-installment amount
+    totalInterest: number;         // Total interest over loan term
+    totalAmount: number;           // Principal + Interest
+  };
+
+  // Payment Schedule (array of installments)
+  paymentSchedule: {
+    installmentNumber: number;
+    dueDate: Timestamp;
+    amount: number;
+    principalAmount: number;
+    interestAmount: number;
+    status: 'pending' | 'paid' | 'overdue' | 'failed';
+    paidAt?: Timestamp;
+    paidAmount?: number;
+    paymentId?: string;
+    attemptCount?: number;
+    lastAttemptAt?: Timestamp;
+  }[];
 
   // Status
-  status: 'active' | 'completed' | 'defaulted' | 'cancelled';
+  status: 'pending' | 'active' | 'completed' | 'defaulted' | 'cancelled';
+  currentInstallment: number;      // Which installment are we on
+  amountPaid: number;              // Total amount paid so far
+  amountRemaining: number;         // Current outstanding balance
 
-  // Payment Method
-  cardToken: string;               // Tokenized card for auto-debit
-
-  // Dates
-  nextPaymentDate: Timestamp;
-  createdAt: Timestamp;
-  updatedAt: Timestamp;
-  completedAt?: Timestamp;
+  // Card Authorization (for auto-debit)
+  cardAuthorization?: {
+    authorizationCode: string;
+    cardType: string;
+    last4: string;
+    expiryMonth: string;
+    expiryYear: string;
+    bank: string;
+    paystackCustomerCode?: string;
+  };
 
   // Metadata
-  metadata: {
-    productDetails?: string;
-    orderValue?: number;
-    initialPayment?: number;
-  };
+  orderId?: string;                // Merchant's order reference
+  productDescription?: string;
+  metadata?: Record<string, any>;
+
+  // Timestamps
+  createdAt: Timestamp;
+  activatedAt?: Timestamp;         // When card was authorized
+  firstPaymentDate?: Timestamp;
+  lastPaymentDate?: Timestamp;
+  completedAt?: Timestamp;
+  defaultedAt?: Timestamp;
+  updatedAt: Timestamp;
+
+  // Default Management
+  daysOverdue?: number;
+  overdueAmount?: number;
+  lateFees?: number;
+  escalationLevel?: 'low' | 'medium' | 'high' | 'critical' | 'terminal';
+
+  // Notes
+  notes?: string;
 }
 ```
+
+### Loan Status Flow
+```
+pending → active → completed
+                 ↘ defaulted
+pending → cancelled
+```
+
+- **pending**: Loan created, awaiting card authorization
+- **active**: Card authorized, payments being collected
+- **completed**: All installments paid
+- **defaulted**: Missed payments, in collections
+- **cancelled**: Cancelled before activation
 
 ### Indexes
 - `customerId` (for customer loan history)
 - `merchantId` (for merchant analytics)
 - `status` (for active loan queries)
-- `nextPaymentDate` (for payment processing)
 - `createdAt` (for sorting)
+- `paymentSchedule.dueDate` (for payment processing)
 
 ---
 
@@ -506,6 +562,195 @@ Pre-aggregated analytics data for merchant dashboards.
 - `merchantId` (for merchant-specific analytics)
 - `period` (for aggregation level)
 - `periodDate` (for time-series queries)
+
+---
+
+## 11. Collection: `crl_merchant_loan_configs`
+
+Merchant-specific loan configurations allowing multiple loan products per merchant.
+
+### Document Structure
+
+```typescript
+{
+  configId: string;                // Unique config ID (document ID)
+  merchantId: string;
+  name: string;                    // e.g., "Standard Plan", "Flexible Plan", "Quick Cash"
+  description?: string;
+
+  // Rate Configuration
+  interestRate: number;            // Annual interest rate percentage (e.g., 15 for 15%)
+  penaltyRate: number;             // Late payment penalty percentage (e.g., 5 for 5%)
+
+  // Loan Limits
+  minLoanAmount: number;           // Minimum loan amount (e.g., 5000)
+  maxLoanAmount: number;           // Maximum loan amount (e.g., 500000)
+
+  // Allowed Frequencies
+  allowedFrequencies: ('daily' | 'weekly' | 'bi-weekly' | 'monthly' | 'quarterly' | 'bi-annually' | 'annually')[];
+
+  // Allowed Tenors
+  allowedTenors: {
+    minValue: number;              // e.g., 1
+    maxValue: number;              // e.g., 12
+    period: 'DAYS' | 'WEEKS' | 'MONTHS' | 'YEARS';
+  }[];
+
+  // Status
+  isActive: boolean;               // Whether this config is currently available
+
+  // Timestamps
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+```
+
+### Example Configurations
+
+```typescript
+// Example 1: Short-term daily loans
+{
+  configId: "config_001",
+  merchantId: "merchant_123",
+  name: "Quick Cash",
+  interestRate: 20,
+  penaltyRate: 5,
+  minLoanAmount: 5000,
+  maxLoanAmount: 50000,
+  allowedFrequencies: ["daily", "weekly"],
+  allowedTenors: [
+    { minValue: 7, maxValue: 30, period: "DAYS" }
+  ],
+  isActive: true
+}
+
+// Example 2: Standard monthly loans
+{
+  configId: "config_002",
+  merchantId: "merchant_123",
+  name: "Standard Plan",
+  interestRate: 15,
+  penaltyRate: 3,
+  minLoanAmount: 10000,
+  maxLoanAmount: 200000,
+  allowedFrequencies: ["weekly", "bi-weekly", "monthly"],
+  allowedTenors: [
+    { minValue: 1, maxValue: 6, period: "MONTHS" }
+  ],
+  isActive: true
+}
+```
+
+### Indexes
+- `merchantId` (for merchant-specific configs)
+- `isActive` (for active configurations)
+- `createdAt` (for sorting)
+
+---
+
+## 12. Collection: `crl_webhooks`
+
+Webhook subscriptions and delivery logs for merchant integrations.
+
+### Document Structure
+
+```typescript
+{
+  webhookId: string;               // Unique webhook ID (document ID)
+  merchantId: string;
+
+  // Webhook Configuration
+  url: string;                     // Webhook endpoint URL
+  secret: string;                  // Secret for signature verification (hashed)
+  events: string[];                // Subscribed events (e.g., ['loan.created', 'payment.success'])
+  isActive: boolean;               // Whether webhook is active
+
+  // Health Metrics
+  consecutiveFailures: number;     // Count of consecutive delivery failures
+  lastSuccessAt?: Timestamp;       // Last successful delivery
+  lastFailureAt?: Timestamp;       // Last failed delivery
+  lastFailureReason?: string;      // Reason for last failure
+
+  // Timestamps
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+```
+
+### Webhook Events
+
+| Event | Description |
+|-------|-------------|
+| `loan.created` | New loan created |
+| `loan.activated` | Loan activated (card authorized) |
+| `loan.completed` | Loan fully paid |
+| `loan.defaulted` | Loan marked as defaulted |
+| `loan.cancelled` | Loan cancelled |
+| `payment.pending` | Payment scheduled |
+| `payment.success` | Payment successful |
+| `payment.failed` | Payment failed |
+| `payment.overdue` | Payment overdue |
+| `customer.created` | New customer onboarded |
+| `credit.approved` | Credit assessment approved |
+| `credit.declined` | Credit assessment declined |
+
+### Indexes
+- `merchantId` (for merchant webhooks)
+- `isActive` (for active webhooks)
+- `events` (for event filtering)
+
+---
+
+## 13. Collection: `crl_webhook_deliveries`
+
+Log of webhook delivery attempts for debugging and retry.
+
+### Document Structure
+
+```typescript
+{
+  deliveryId: string;              // Unique delivery ID (document ID)
+  webhookId: string;               // Reference to webhook subscription
+  merchantId: string;
+
+  // Event Details
+  event: string;                   // Event type (e.g., 'loan.created')
+  payload: Record<string, any>;    // Event payload sent
+
+  // Delivery Status
+  status: 'pending' | 'success' | 'failed';
+  httpStatusCode?: number;         // Response status code
+  responseBody?: string;           // Response body (truncated)
+  errorMessage?: string;           // Error message if failed
+
+  // Retry Information
+  attemptCount: number;            // Number of delivery attempts
+  nextRetryAt?: Timestamp;         // When to retry next (if failed)
+  maxRetries: number;              // Maximum retry attempts (default: 5)
+
+  // Timestamps
+  createdAt: Timestamp;
+  deliveredAt?: Timestamp;         // When successfully delivered
+  updatedAt: Timestamp;
+}
+```
+
+### Retry Strategy
+
+| Attempt | Delay |
+|---------|-------|
+| 1 | Immediate |
+| 2 | 5 minutes |
+| 3 | 30 minutes |
+| 4 | 2 hours |
+| 5 | 24 hours |
+
+### Indexes
+- `webhookId` (for webhook delivery history)
+- `merchantId` (for merchant delivery logs)
+- `status` (for pending/failed deliveries)
+- `nextRetryAt` (for retry processing)
+- `createdAt` (for sorting)
 
 ---
 

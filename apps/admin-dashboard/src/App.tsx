@@ -8,6 +8,8 @@ import ForgotPassword from './pages/ForgotPassword';
 import Dashboard from './pages/Dashboard';
 import MerchantApproval from './pages/MerchantApproval';
 import Customers from './pages/Customers';
+import Loans from './pages/Loans';
+import LoanDetail from './pages/LoanDetail';
 
 const queryClient = new QueryClient();
 
@@ -48,7 +50,15 @@ function App() {
               path="/loans"
               element={
                 <ProtectedRoute>
-                  <Dashboard />
+                  <Loans />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/loans/:loanId"
+              element={
+                <ProtectedRoute>
+                  <LoanDetail />
                 </ProtectedRoute>
               }
             />

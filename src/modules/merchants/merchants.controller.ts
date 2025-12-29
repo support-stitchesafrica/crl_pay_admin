@@ -16,7 +16,7 @@ import { UpdateMerchantDto } from './dto/update-merchant.dto';
 import { ApproveMerchantDto } from './dto/approve-merchant.dto';
 import { ApiResponse } from '../../common/helpers/response.helper';
 
-@ApiTags('merchants')
+@ApiTags('Merchants')
 @Controller('merchants')
 export class MerchantsController {
   constructor(private readonly merchantsService: MerchantsService) {}
