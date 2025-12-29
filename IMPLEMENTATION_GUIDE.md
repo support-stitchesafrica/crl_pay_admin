@@ -627,13 +627,31 @@ nest g service modules/loans
 - `src/modules/loans/loans.controller.ts`
 - `src/modules/loans/loan-calculator.service.ts`
 
+**Loan Configuration Structure:**
+- **Frequency** (Repayment frequency): Daily, Weekly, Bi-Weekly, Monthly, Quarterly, Bi-Annually, Annually
+- **Tenor**: Combination of value and period
+  - `tenorValue`: Integer (e.g., 3, 6, 12, 90)
+  - `tenorPeriod`: DAYS, WEEKS, MONTHS, YEARS
+- **Merchant Configuration**: Each merchant can have multiple loan configurations with:
+  - Interest rate (percentage)
+  - Penalty settings (late payment penalties)
+  - Minimum/maximum loan amounts
+  - Allowed frequencies
+  - Allowed tenor ranges
+
+**Examples:**
+- Tenor: 6 MONTHS, Frequency: Weekly = ~24 weekly payments over 6 months
+- Tenor: 1 YEAR, Frequency: Monthly = 12 monthly payments over 1 year
+- Tenor: 90 DAYS, Frequency: Daily = 90 daily payments
+
 **Key Features:**
-- [ ] Loan creation and initialization
-- [ ] Payment plan calculation (Bronze/Silver/Gold/Platinum)
-- [ ] Interest calculation
-- [ ] Card tokenization (Paystack)
-- [ ] Loan status management
-- [ ] Early repayment handling
+- [x] Loan creation with flexible tenor and frequency
+- [x] Dynamic installment calculation based on tenor and frequency
+- [x] Interest calculation using merchant configuration
+- [x] Penalty calculation for late payments
+- [x] Card tokenization (Paystack)
+- [x] Loan status management
+- [x] Early repayment handling
 
 ### Phase 2: Payment Processing & Notifications (Weeks 4-5)
 
@@ -803,9 +821,10 @@ npm install @tanstack/react-query axios react-hook-form zod
    - Decline screen with reasons
 
 5. **Payment Plan Selection** (`/select-plan`)
-   - Display available plans (Bronze/Silver/Gold/Platinum)
-   - Show installment breakdown
+   - Display available tenor and frequency options
+   - Show installment breakdown based on selected combination
    - Interest rate transparency
+   - Penalty information
    - Total amount payable
 
 6. **Card Authorization** (`/authorize-card`)
