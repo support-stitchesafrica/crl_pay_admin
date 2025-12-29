@@ -7,11 +7,15 @@ import { LoginCredentials, RegisterData, AuthResponse } from './types';
 export const login = async (credentials: LoginCredentials): Promise<AuthResponse> => {
   const response = await api.post('/auth/merchant/login', credentials);
 
-  // Store token and merchant data
-  if (response.data.success) {
-    localStorage.setItem('merchant_token', response.data.data.access_token);
-    localStorage.setItem('merchant_data', JSON.stringify(response.data.data.user));
+  // Check if login was successful
+  if (!response.data.success) {
+    // If API returns success: false, throw an error
+    throw new Error(response.data.message || 'Login failed');
   }
+
+  // Store token and merchant data
+  localStorage.setItem('merchant_token', response.data.data.access_token);
+  localStorage.setItem('merchant_data', JSON.stringify(response.data.data.user));
 
   return response.data;
 };
@@ -54,4 +58,43 @@ export const getCurrentMerchant = () => {
     console.error('Error parsing merchant data:', error);
     return null;
   }
+};
+
+/**
+ * Send OTP for password reset
+ */
+export const forgotPassword = async (email: string): Promise<any> => {
+  const response = await api.post('/auth/merchant/forgot-password', { email });
+
+  if (!response.data.success) {
+    throw new Error(response.data.message || 'Failed to send OTP');
+  }
+
+  return response.data;
+};
+
+/**
+ * Verify OTP
+ */
+export const verifyOTP = async (email: string, otp: string): Promise<any> => {
+  const response = await api.post('/auth/merchant/verify-otp', { email, otp });
+
+  if (!response.data.success) {
+    throw new Error(response.data.message || 'Failed to verify OTP');
+  }
+
+  return response.data;
+};
+
+/**
+ * Reset password
+ */
+export const resetPassword = async (email: string, otp: string, newPassword: string): Promise<any> => {
+  const response = await api.post('/auth/merchant/reset-password', { email, otp, newPassword });
+
+  if (!response.data.success) {
+    throw new Error(response.data.message || 'Failed to reset password');
+  }
+
+  return response.data;
 };

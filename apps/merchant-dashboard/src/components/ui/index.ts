@@ -7,7 +7,9 @@ export { default as DateInput } from './DateInput';
 export { default as OTPInput } from './OTPInput';
 export { default as Select } from './Select';
 export { default as Button } from './Button';
+export { ConfirmationModal } from './ConfirmationModal';
 
 export type { InputProps } from './Input';
 export type { SelectProps } from './Select';
 export type { ButtonProps } from './Button';
+export type { ConfirmationModalProps } from './ConfirmationModal';

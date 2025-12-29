@@ -64,6 +64,8 @@ export interface RegisterData {
   address: string;
   city: string;
   state: string;
+  country?: string;
+  businessCategory: string;
 }
 
 export interface AuthResponse {

@@ -6,6 +6,7 @@ interface OTPInputProps {
   onChange: (value: string) => void;
   error?: string;
   label?: string;
+  disabled?: boolean;
 }
 
 export default function OTPInput({
@@ -14,6 +15,7 @@ export default function OTPInput({
   onChange,
   error,
   label,
+  disabled = false,
 }: OTPInputProps) {
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
@@ -54,7 +56,7 @@ export default function OTPInput({
           {label}
         </label>
       )}
-      <div className="flex gap-2 justify-center">
+      <div className="flex gap-3 justify-center">
         {Array.from({ length }).map((_, index) => (
           <input
             key={index}
@@ -66,15 +68,18 @@ export default function OTPInput({
             onChange={(e) => handleChange(index, e.target.value)}
             onKeyDown={(e) => handleKeyDown(index, e)}
             onPaste={handlePaste}
+            disabled={disabled}
             className={`
-              w-12 h-12 text-center text-lg font-semibold
+              w-14 h-14 text-center text-2xl font-bold
               border-2 rounded-lg
               transition-colors duration-200
+              ${disabled ? 'bg-gray-100 cursor-not-allowed' : 'bg-white'}
               ${error
                 ? 'border-red-300 focus:border-red-500 focus:ring-red-500'
                 : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'
               }
               focus:outline-none focus:ring-2 focus:ring-opacity-20
+              disabled:opacity-50
             `}
           />
         ))}

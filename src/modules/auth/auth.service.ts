@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException, Inject, Logger } from '@nestjs/common';
+import { Injectable, UnauthorizedException, Inject, Logger, BadRequestException, NotFoundException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { Firestore } from '@google-cloud/firestore';
 import * as bcrypt from 'bcrypt';
@@ -6,6 +6,15 @@ import { MerchantsService } from '../merchants/merchants.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { Merchant } from '../../entities/merchant.entity';
 import { Admin } from '../../entities/admin.entity';
+
+interface OTPRecord {
+  email: string;
+  otp: string;
+  createdAt: Date;
+  expiresAt: Date;
+  verified: boolean;
+  userType: 'merchant' | 'admin';
+}
 
 export interface JwtPayload {
   sub: string; // merchantId or adminId
@@ -19,6 +28,7 @@ export interface JwtPayload {
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
   private adminsCollection: FirebaseFirestore.CollectionReference;
+  private otpCollection: FirebaseFirestore.CollectionReference;
 
   constructor(
     @Inject('FIRESTORE') private firestore: Firestore,
@@ -27,6 +37,14 @@ export class AuthService {
     private notificationsService: NotificationsService,
   ) {
     this.adminsCollection = this.firestore.collection('crl_admins');
+    this.otpCollection = this.firestore.collection('password_reset_otps');
+  }
+
+  /**
+   * Generate a 6-digit OTP
+   */
+  private generateOTP(): string {
+    return Math.floor(100000 + Math.random() * 900000).toString();
   }
 
   async merchantLogin(email: string, password: string) {
@@ -210,5 +228,142 @@ export class AuthService {
       this.logger.error('Error creating default admin:', error);
       throw error;
     }
+  }
+
+  /**
+   * Send OTP for password reset
+   */
+  async sendPasswordResetOTP(email: string, userType: 'merchant' | 'admin'): Promise<void> {
+    // Verify user exists
+    const collectionName = userType === 'merchant' ? 'crl_merchants' : 'crl_admins';
+    const userCollection = this.firestore.collection(collectionName);
+    const userSnapshot = await userCollection.where('email', '==', email).get();
+
+    if (userSnapshot.empty) {
+      throw new NotFoundException(`${userType === 'merchant' ? 'Merchant' : 'Admin'} with this email not found`);
+    }
+
+    // Generate OTP
+    const otp = this.generateOTP();
+    const now = new Date();
+    const expiresAt = new Date(now.getTime() + 15 * 60 * 1000); // 15 minutes
+
+    // Delete any existing OTPs for this email
+    const existingOTPs = await this.otpCollection
+      .where('email', '==', email)
+      .where('userType', '==', userType)
+      .get();
+
+    const batch = this.firestore.batch();
+    existingOTPs.forEach((doc) => {
+      batch.delete(doc.ref);
+    });
+    await batch.commit();
+
+    // Store new OTP
+    const otpRecord: OTPRecord = {
+      email,
+      otp,
+      createdAt: now,
+      expiresAt,
+      verified: false,
+      userType,
+    };
+
+    await this.otpCollection.add(otpRecord);
+
+    // Send email
+    await this.notificationsService.sendForgotPasswordOTP(email, otp, userType);
+    this.logger.log(`Password reset OTP sent to ${email}`);
+  }
+
+  /**
+   * Verify OTP for password reset
+   */
+  async verifyPasswordResetOTP(email: string, otp: string, userType: 'merchant' | 'admin'): Promise<boolean> {
+    const snapshot = await this.otpCollection
+      .where('email', '==', email)
+      .where('otp', '==', otp)
+      .where('userType', '==', userType)
+      .where('verified', '==', false)
+      .get();
+
+    if (snapshot.empty) {
+      throw new BadRequestException('Invalid or expired OTP');
+    }
+
+    const otpDoc = snapshot.docs[0];
+    const otpData = otpDoc.data() as any;
+
+    // Convert Firestore Timestamp to Date
+    const expiresAt = otpData.expiresAt?.toDate ? otpData.expiresAt.toDate() : new Date(otpData.expiresAt);
+
+    // Check if OTP has expired
+    if (new Date() > expiresAt) {
+      await otpDoc.ref.delete();
+      throw new BadRequestException('OTP has expired. Please request a new one.');
+    }
+
+    // Mark OTP as verified
+    await otpDoc.ref.update({ verified: true });
+    this.logger.log(`OTP verified for ${email}`);
+
+    return true;
+  }
+
+  /**
+   * Reset password with verified OTP
+   */
+  async resetPassword(
+    email: string,
+    otp: string,
+    newPassword: string,
+    userType: 'merchant' | 'admin',
+  ): Promise<void> {
+    // Verify OTP is valid and verified
+    const snapshot = await this.otpCollection
+      .where('email', '==', email)
+      .where('otp', '==', otp)
+      .where('userType', '==', userType)
+      .where('verified', '==', true)
+      .get();
+
+    if (snapshot.empty) {
+      throw new BadRequestException('Invalid OTP or OTP not verified');
+    }
+
+    const otpDoc = snapshot.docs[0];
+    const otpData = otpDoc.data() as any;
+
+    // Convert Firestore Timestamp to Date
+    const expiresAt = otpData.expiresAt?.toDate ? otpData.expiresAt.toDate() : new Date(otpData.expiresAt);
+
+    // Check if OTP has expired
+    if (new Date() > expiresAt) {
+      await otpDoc.ref.delete();
+      throw new BadRequestException('OTP has expired. Please request a new one.');
+    }
+
+    // Hash new password
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+
+    // Update user password
+    const collectionName = userType === 'merchant' ? 'crl_merchants' : 'crl_admins';
+    const userCollection = this.firestore.collection(collectionName);
+    const userSnapshot = await userCollection.where('email', '==', email).get();
+
+    if (userSnapshot.empty) {
+      throw new NotFoundException('User not found');
+    }
+
+    const userDoc = userSnapshot.docs[0];
+    await userDoc.ref.update({
+      passwordHash,
+      updatedAt: new Date(),
+    });
+
+    // Delete the used OTP
+    await otpDoc.ref.delete();
+    this.logger.log(`Password reset successful for ${email}`);
   }
 }

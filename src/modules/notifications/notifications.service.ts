@@ -381,4 +381,11 @@ export class NotificationsService {
     await Promise.all(promises);
     this.logger.log(`Loan completion notification sent for loan ${data.loanId}`);
   }
+
+  /**
+   * Send forgot password OTP email
+   */
+  async sendForgotPasswordOTP(email: string, otp: string, userType: 'merchant' | 'admin'): Promise<void> {
+    return this.emailService.sendForgotPasswordOTP(email, otp, userType);
+  }
 }

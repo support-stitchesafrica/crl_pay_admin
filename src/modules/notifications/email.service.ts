@@ -61,6 +61,7 @@ export class EmailService {
       'payment-failure',
       'loan-completion',
       'overdue-payment',
+      'forgot-password-otp',
     ];
 
     templateFiles.forEach((templateName) => {
@@ -371,6 +372,24 @@ export class EmailService {
       this.logger.log(`Overdue payment email sent to: ${data.customerEmail}`);
     } catch (error) {
       this.logger.error(`Failed to send overdue payment email: ${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Send forgot password OTP email
+   */
+  async sendForgotPasswordOTP(email: string, otp: string, userType: 'merchant' | 'admin'): Promise<void> {
+    try {
+      const html = this.renderTemplate('forgot-password-otp', {
+        otp,
+        userType,
+      });
+
+      await this.sendEmail(email, 'Password Reset OTP - CRL Pay', html);
+      this.logger.log(`Forgot password OTP sent to: ${email}`);
+    } catch (error) {
+      this.logger.error(`Failed to send forgot password OTP: ${error.message}`);
       throw error;
     }
   }

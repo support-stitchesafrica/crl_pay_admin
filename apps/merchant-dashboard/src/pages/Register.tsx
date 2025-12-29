@@ -1,8 +1,17 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Store, AlertCircle, CheckCircle, ArrowRight, Lock, TrendingUp, Zap, CreditCard } from 'lucide-react';
+import { Store, AlertCircle, CheckCircle, ArrowRight, Lock } from 'lucide-react';
 import { Input, EmailInput, PasswordInput, PhoneInput, Select, Button } from '../components/ui';
 import * as authService from '../services/auth.service';
+import { showToast } from '../utils/toast';
+import AuthLayout from '../components/AuthLayout';
+
+const countries = [
+  { value: 'Nigeria', label: 'Nigeria' },
+  { value: 'Ghana', label: 'Ghana' },
+  { value: 'Kenya', label: 'Kenya' },
+  { value: 'South Africa', label: 'South Africa' },
+];
 
 const nigerianStates = [
   { value: '', label: 'Select State' },
@@ -45,11 +54,25 @@ const nigerianStates = [
   { value: 'Zamfara', label: 'Zamfara' },
 ];
 
+const businessCategories = [
+  { value: '', label: 'Select Category' },
+  { value: 'Electronics', label: 'Electronics' },
+  { value: 'Fashion & Clothing', label: 'Fashion & Clothing' },
+  { value: 'Home & Furniture', label: 'Home & Furniture' },
+  { value: 'Health & Beauty', label: 'Health & Beauty' },
+  { value: 'Groceries & Food', label: 'Groceries & Food' },
+  { value: 'Sports & Fitness', label: 'Sports & Fitness' },
+  { value: 'Automotive', label: 'Automotive' },
+  { value: 'Education', label: 'Education' },
+  { value: 'Other', label: 'Other' },
+];
+
 export default function Register() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  const [countdown, setCountdown] = useState(10);
   const [formData, setFormData] = useState({
     businessName: '',
     email: '',
@@ -59,7 +82,19 @@ export default function Register() {
     address: '',
     city: '',
     state: '',
+    country: 'Nigeria',
+    businessCategory: '',
   });
+
+  // Countdown timer for auto-redirect
+  useEffect(() => {
+    if (success && countdown > 0) {
+      const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+      return () => clearTimeout(timer);
+    } else if (success && countdown === 0) {
+      navigate('/login');
+    }
+  }, [success, countdown, navigate]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData({
@@ -75,12 +110,16 @@ export default function Register() {
 
     // Validation
     if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match');
+      const errorMsg = 'Passwords do not match';
+      setError(errorMsg);
+      showToast.error(errorMsg);
       return;
     }
 
     if (formData.password.length < 6) {
-      setError('Password must be at least 6 characters');
+      const errorMsg = 'Password must be at least 6 characters';
+      setError(errorMsg);
+      showToast.error(errorMsg);
       return;
     }
 
@@ -95,14 +134,18 @@ export default function Register() {
         address: formData.address,
         city: formData.city,
         state: formData.state,
+        country: formData.country,
+        businessCategory: formData.businessCategory,
       });
 
       if (response.success) {
         setSuccess(true);
-        setTimeout(() => navigate('/login'), 3000);
+        showToast.success('Registration successful! Your application is pending approval.');
       }
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Registration failed. Please try again.');
+      const errorMessage = err.response?.data?.message || 'Registration failed. Please try again.';
+      setError(errorMessage);
+      showToast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -120,9 +163,22 @@ export default function Register() {
             <p className="text-gray-600 mb-6 leading-relaxed">
               Your application is pending approval. You will be notified via email once your account is activated.
             </p>
+
+            {/* Manual Login Button */}
+            <Button
+              onClick={() => navigate('/login')}
+              fullWidth
+              size="lg"
+              className="mb-4"
+              icon={<ArrowRight className="w-5 h-5" />}
+            >
+              Go to Login
+            </Button>
+
+            {/* Auto-redirect countdown */}
             <div className="inline-flex items-center gap-2 text-sm text-gray-500">
               <div className="w-2 h-2 bg-blue-600 rounded-full animate-pulse"></div>
-              <span>Redirecting to login page...</span>
+              <span>Auto-redirecting in {countdown} second{countdown !== 1 ? 's' : ''}...</span>
             </div>
           </div>
         </div>
@@ -131,22 +187,19 @@ export default function Register() {
   }
 
   return (
-    <div className="min-h-screen flex">
-      {/* Left Side - Form */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-white overflow-y-auto">
-        <div className="w-full max-w-md py-8">
-          {/* Logo and Header */}
-          <div className="mb-10">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-xl mb-6">
-              <Store className="w-8 h-8 text-white" />
-            </div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">
-              Create Merchant Account
-            </h1>
-            <p className="text-gray-600">
-              Start accepting BNPL payments in minutes
-            </p>
-          </div>
+    <AuthLayout>
+      {/* Logo and Header */}
+      <div className="mb-10">
+        <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-xl mb-6">
+          <Store className="w-8 h-8 text-white" />
+        </div>
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">
+          Create Merchant Account
+        </h1>
+        <p className="text-gray-600">
+          Start accepting BNPL payments in minutes
+        </p>
+      </div>
 
           {/* Registration Form */}
           <form onSubmit={handleSubmit} className="space-y-6">
@@ -187,6 +240,17 @@ export default function Register() {
                 name="phone"
                 value={formData.phone}
                 onChange={handleChange}
+                placeholder="+234 801 234 5678"
+                required
+                disabled={loading}
+              />
+
+              <Select
+                label="Business Category"
+                name="businessCategory"
+                value={formData.businessCategory}
+                onChange={handleChange}
+                options={businessCategories}
                 required
                 disabled={loading}
               />
@@ -195,6 +259,16 @@ export default function Register() {
             {/* Location */}
             <div className="space-y-4">
               <h3 className="text-sm font-semibold text-gray-900 border-b border-gray-200 pb-2">Business Location</h3>
+
+              <Select
+                label="Country"
+                name="country"
+                value={formData.country}
+                onChange={handleChange}
+                options={countries}
+                required
+                disabled={loading}
+              />
 
               <Input
                 label="Business Address"
@@ -284,68 +358,12 @@ export default function Register() {
             <span>Your information is secure and encrypted</span>
           </div>
 
-          {/* Terms */}
-          <div className="mt-4 text-center">
-            <p className="text-xs text-gray-500">
-              By registering, you agree to our Terms of Service and Privacy Policy
-            </p>
-          </div>
-        </div>
+      {/* Terms */}
+      <div className="mt-4 text-center">
+        <p className="text-xs text-gray-500">
+          By registering, you agree to our Terms of Service and Privacy Policy
+        </p>
       </div>
-
-      {/* Right Side - Background */}
-      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-gray-900 via-gray-800 to-blue-900 p-12 items-center justify-center relative overflow-hidden">
-        {/* Animated background elements */}
-        <div className="absolute inset-0">
-          <div className="absolute top-20 right-20 w-72 h-72 bg-blue-600/20 rounded-full blur-3xl"></div>
-          <div className="absolute bottom-20 left-20 w-96 h-96 bg-white/5 rounded-full blur-3xl"></div>
-          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-blue-500/10 rounded-full blur-3xl"></div>
-        </div>
-
-        {/* Content */}
-        <div className="relative z-10 text-white max-w-lg">
-          <div className="mb-8">
-            <Store className="w-16 h-16 mb-6 opacity-90" />
-            <h2 className="text-4xl font-bold mb-4 leading-tight">
-              Join Thousands of Merchants
-            </h2>
-            <p className="text-gray-300 text-lg leading-relaxed">
-              Transform your business with Buy Now, Pay Later. Increase sales, attract more customers, and grow revenue.
-            </p>
-          </div>
-
-          {/* Feature List */}
-          <div className="space-y-4 mt-12">
-            <div className="flex items-start gap-4">
-              <div className="w-10 h-10 bg-white/10 rounded-lg flex items-center justify-center flex-shrink-0">
-                <TrendingUp className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className="font-semibold mb-1">Increase Sales by 30%</h3>
-                <p className="text-gray-300 text-sm">Customers spend more with flexible payment options</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-4">
-              <div className="w-10 h-10 bg-white/10 rounded-lg flex items-center justify-center flex-shrink-0">
-                <Zap className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className="font-semibold mb-1">Get Paid Instantly</h3>
-                <p className="text-gray-300 text-sm">Receive full payment upfront, no waiting for installments</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-4">
-              <div className="w-10 h-10 bg-white/10 rounded-lg flex items-center justify-center flex-shrink-0">
-                <CreditCard className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className="font-semibold mb-1">Zero Credit Risk</h3>
-                <p className="text-gray-300 text-sm">We handle credit checks, approvals, and collections</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+    </AuthLayout>
   );
 }

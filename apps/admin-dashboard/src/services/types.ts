@@ -4,18 +4,20 @@ export interface Merchant {
   businessName: string;
   email: string;
   phone: string;
-  address: string;
-  city: string;
-  state: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  businessAddress?: string;
+  businessCategory?: string;
   status: 'pending' | 'active' | 'suspended' | 'rejected';
   apiKey?: string;
   webhookUrl?: string;
-  totalTransactions: number;
-  totalRevenue: number;
-  activeCustomers: number;
-  defaultRate: number;
-  createdAt: string;
-  updatedAt: string;
+  totalTransactions?: number;
+  totalRevenue?: number;
+  activeCustomers?: number;
+  defaultRate?: number;
+  createdAt: string | { _seconds: number; _nanoseconds: number };
+  updatedAt: string | { _seconds: number; _nanoseconds: number };
   rejectionReason?: string;
 }
 

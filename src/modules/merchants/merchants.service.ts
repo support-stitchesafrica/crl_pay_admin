@@ -42,20 +42,34 @@ export class MerchantsService {
       const merchantRef = this.merchantsCollection.doc();
       const merchantId = merchantRef.id;
 
+      // Build business address from components
+      const businessAddress = [
+        createMerchantDto.address,
+        createMerchantDto.city,
+        createMerchantDto.state,
+        createMerchantDto.country || 'Nigeria',
+      ].filter(Boolean).join(', ');
+
       const merchant: Merchant = {
         merchantId,
         businessName: createMerchantDto.businessName,
         email: createMerchantDto.email,
         phone: createMerchantDto.phone,
         passwordHash,
-        cacNumber: createMerchantDto.cacNumber,
-        businessAddress: createMerchantDto.businessAddress,
+        businessAddress,
         businessCategory: createMerchantDto.businessCategory,
-        websiteUrl: createMerchantDto.websiteUrl,
         status: 'pending',
         createdAt: new Date(),
         updatedAt: new Date(),
       };
+
+      // Add optional fields only if they have values (Firestore doesn't accept undefined)
+      if (createMerchantDto.cacNumber) {
+        merchant.cacNumber = createMerchantDto.cacNumber;
+      }
+      if (createMerchantDto.websiteUrl) {
+        merchant.websiteUrl = createMerchantDto.websiteUrl;
+      }
 
       await merchantRef.set(merchant);
       this.logger.log(`Merchant created successfully: ${merchant.businessName} (ID: ${merchantId})`);

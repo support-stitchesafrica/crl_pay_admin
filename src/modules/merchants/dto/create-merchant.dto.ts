@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEmail, IsNotEmpty, IsString, IsPhoneNumber, MinLength, IsOptional } from 'class-validator';
+import { IsEmail, IsNotEmpty, IsString, MinLength, IsOptional } from 'class-validator';
 
 export class CreateMerchantDto {
   @ApiProperty({ example: 'Acme Electronics Ltd' })
@@ -13,8 +13,8 @@ export class CreateMerchantDto {
   email: string;
 
   @ApiProperty({ example: '+2348012345678' })
-  @IsPhoneNumber('NG')
   @IsNotEmpty()
+  @IsString()
   phone: string;
 
   @ApiProperty({ example: 'SecurePassword123!' })
@@ -28,17 +28,32 @@ export class CreateMerchantDto {
   @IsString()
   cacNumber?: string;
 
-  @ApiProperty({ example: '123 Business Street, Lagos' })
+  @ApiProperty({ example: '123 Business Street' })
   @IsNotEmpty()
   @IsString()
-  businessAddress: string;
+  address: string;
+
+  @ApiProperty({ example: 'Lagos' })
+  @IsNotEmpty()
+  @IsString()
+  city: string;
+
+  @ApiProperty({ example: 'Lagos' })
+  @IsNotEmpty()
+  @IsString()
+  state: string;
+
+  @ApiProperty({ example: 'Nigeria', default: 'Nigeria' })
+  @IsOptional()
+  @IsString()
+  country?: string;
 
   @ApiProperty({ example: 'Electronics and Gadgets' })
   @IsNotEmpty()
   @IsString()
   businessCategory: string;
 
-  @ApiProperty({ example: 'https://acme-electronics.com' })
+  @ApiProperty({ example: 'https://acme-electronics.com', required: false })
   @IsOptional()
   @IsString()
   websiteUrl?: string;
