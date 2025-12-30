@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+    .header { background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
+    .content { background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 8px 8px; }
+    .footer { text-align: center; padding: 20px; color: #6b7280; font-size: 14px; }
+    .button { display: inline-block; padding: 12px 30px; background: #7c3aed; color: white; text-decoration: none; border-radius: 6px; margin: 20px 0; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Welcome to CRL Pay!</h1>
+    </div>
+    <div class="content">
+      <p>Dear {{companyName}},</p>
+      <p>Thank you for registering as a financier with CRL Pay! We've received your application and it's currently under review.</p>
+      <p><strong>What happens next?</strong></p>
+      <ul>
+        <li>Our team will review your application within 24-48 hours</li>
+        <li>You'll receive an email notification once your account is approved</li>
+        <li>After approval, you can log in and start funding merchant loans</li>
+        <li>Access comprehensive analytics and manage your investment portfolio</li>
+      </ul>
+      <p>If you have any questions, please don't hesitate to contact our support team.</p>
+      <p>Best regards,<br>The CRL Pay Team</p>
+    </div>
+    <div class="footer">
+      <p>&copy; {{currentYear}} CRL Pay. All rights reserved.</p>
+    </div>
+  </div>
+</body>
+</html>

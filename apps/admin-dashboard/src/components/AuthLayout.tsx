@@ -7,11 +7,13 @@ interface AuthLayoutProps {
 
 export default function AuthLayout({ children }: AuthLayoutProps) {
   return (
-    <div className="min-h-screen flex">
+    <div className="h-screen flex overflow-hidden">
       {/* Left Side - Form */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-white">
-        <div className="w-full max-w-md">
-          {children}
+      <div className="w-full lg:w-1/2 overflow-y-auto bg-white">
+        <div className="min-h-full flex items-center justify-center p-8">
+          <div className="w-full max-w-md py-8">
+            {children}
+          </div>
         </div>
       </div>
 

@@ -15,14 +15,8 @@ export default function Dashboard() {
       setLoading(true);
       setError(null);
 
-      // Get merchant ID from stored data
-      const merchantData = localStorage.getItem('merchant_data');
-      if (!merchantData) {
-        throw new Error('Merchant data not found');
-      }
-      const merchant = JSON.parse(merchantData);
-
-      const data = await dashboardService.getStats(merchant.merchantId);
+      // Fetch stats using JWT token (no need to pass merchantId)
+      const data = await dashboardService.getStats();
       setStats(data);
     } catch (err: any) {
       setError(err.response?.data?.message || err.message || 'Failed to load dashboard statistics');

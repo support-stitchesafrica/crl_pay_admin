@@ -7,7 +7,7 @@ export interface Merchant {
   address: string;
   city: string;
   state: string;
-  status: 'pending' | 'active' | 'suspended' | 'rejected';
+  status: 'pending' | 'approved' | 'suspended' | 'rejected';
   apiKey?: string;
   webhookUrl?: string;
   totalTransactions: number;

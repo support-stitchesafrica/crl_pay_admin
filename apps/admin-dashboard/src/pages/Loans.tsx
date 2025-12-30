@@ -10,10 +10,12 @@ import {
   Search,
   Filter,
   Users,
+  Loader2,
 } from 'lucide-react';
 import { getLoans } from '../services/loan.service';
 import { Loan } from '../services/types/loan.types';
 import { showToast } from '../utils/toast';
+import DashboardLayout from '../components/DashboardLayout';
 
 export default function Loans() {
   const [loans, setLoans] = useState<Loan[]>([]);
@@ -104,25 +106,28 @@ export default function Loans() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading loans...</p>
+      <DashboardLayout>
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <Loader2 className="w-8 h-8 animate-spin text-blue-600 mx-auto mb-3" />
+            <p className="text-gray-600">Loading loans...</p>
+          </div>
         </div>
-      </div>
+      </DashboardLayout>
     );
   }
 
   return (
-    <div className="p-6">
+    <DashboardLayout>
+      <div className="space-y-6">
       {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">All Loans</h1>
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900">Loans</h1>
         <p className="text-gray-600 mt-1">Monitor and manage all loans across all merchants</p>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between">
             <div>
@@ -169,7 +174,7 @@ export default function Loans() {
       </div>
 
       {/* Additional Stats Row */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between">
             <div>
@@ -204,7 +209,7 @@ export default function Loans() {
       </div>
 
       {/* Filters */}
-      <div className="bg-white rounded-lg shadow mb-6 p-4">
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
         <div className="flex flex-col md:flex-row gap-4">
           {/* Search */}
           <div className="flex-1">
@@ -378,6 +383,7 @@ export default function Loans() {
           </table>
         </div>
       </div>
-    </div>
+      </div>
+    </DashboardLayout>
   );
 }

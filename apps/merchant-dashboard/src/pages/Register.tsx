@@ -84,6 +84,10 @@ export default function Register() {
     state: '',
     country: 'Nigeria',
     businessCategory: '',
+    cacNumber: '',
+    bankName: '',
+    accountNumber: '',
+    accountName: '',
   });
 
   // Countdown timer for auto-redirect
@@ -126,7 +130,7 @@ export default function Register() {
     try {
       setLoading(true);
 
-      const response = await authService.register({
+      const registrationData: any = {
         businessName: formData.businessName,
         email: formData.email,
         password: formData.password,
@@ -136,7 +140,22 @@ export default function Register() {
         state: formData.state,
         country: formData.country,
         businessCategory: formData.businessCategory,
-      });
+      };
+
+      // Add optional fields if provided
+      if (formData.cacNumber) {
+        registrationData.cacNumber = formData.cacNumber;
+      }
+
+      if (formData.bankName || formData.accountNumber || formData.accountName) {
+        registrationData.settlementAccount = {
+          bankName: formData.bankName,
+          accountNumber: formData.accountNumber,
+          accountName: formData.accountName,
+        };
+      }
+
+      const response = await authService.register(registrationData);
 
       if (response.success) {
         setSuccess(true);
@@ -301,6 +320,48 @@ export default function Register() {
                   disabled={loading}
                 />
               </div>
+            </div>
+
+            {/* Settlement Account */}
+            <div className="space-y-4">
+              <h3 className="text-sm font-semibold text-gray-900 border-b border-gray-200 pb-2">Settlement Account (Optional)</h3>
+
+              <Input
+                label="CAC Number"
+                name="cacNumber"
+                value={formData.cacNumber}
+                onChange={handleChange}
+                placeholder="RC1234567"
+                disabled={loading}
+              />
+
+              <Input
+                label="Bank Name"
+                name="bankName"
+                value={formData.bankName}
+                onChange={handleChange}
+                placeholder="e.g., Access Bank"
+                disabled={loading}
+              />
+
+              <Input
+                label="Account Number"
+                name="accountNumber"
+                value={formData.accountNumber}
+                onChange={handleChange}
+                placeholder="0123456789"
+                disabled={loading}
+                maxLength={10}
+              />
+
+              <Input
+                label="Account Name"
+                name="accountName"
+                value={formData.accountName}
+                onChange={handleChange}
+                placeholder="Business Account Name"
+                disabled={loading}
+              />
             </div>
 
             {/* Security */}

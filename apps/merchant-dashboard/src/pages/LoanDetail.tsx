@@ -11,6 +11,7 @@ import {
   AlertTriangle,
   TrendingUp,
 } from 'lucide-react';
+import DashboardLayout from '../components/DashboardLayout';
 import { getLoan, cancelLoan, updateLoanNotes } from '../services/loan.service';
 import { Loan } from '../services/types/loan.types';
 import { showToast } from '../utils/toast';
@@ -128,12 +129,14 @@ export default function LoanDetail() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading loan details...</p>
+      <DashboardLayout>
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+            <p className="mt-4 text-gray-600">Loading loan details...</p>
+          </div>
         </div>
-      </div>
+      </DashboardLayout>
     );
   }
 
@@ -145,7 +148,8 @@ export default function LoanDetail() {
   const progress = (loan.amountPaid / loan.configuration.totalAmount) * 100;
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
+    <DashboardLayout>
+      <div className="space-y-6 max-w-7xl mx-auto">
       {/* Header */}
       <div className="mb-6">
         <Link
@@ -473,6 +477,7 @@ export default function LoanDetail() {
           </div>
         </div>
       </div>
-    </div>
+      </div>
+    </DashboardLayout>
   );
 }

@@ -186,29 +186,11 @@ export class LoansService {
     status?: string;
     limit?: number;
   }): Promise<Loan[]> {
-    let query: FirebaseFirestore.Query = this.loansCollection;
+    // Fetch all loans ordered by createdAt
+    // We filter in-memory to avoid Firestore composite index requirement
+    const snapshot = await this.loansCollection.orderBy('createdAt', 'desc').get();
 
-    if (filters?.merchantId) {
-      query = query.where('merchantId', '==', filters.merchantId);
-    }
-
-    if (filters?.customerId) {
-      query = query.where('customerId', '==', filters.customerId);
-    }
-
-    if (filters?.status) {
-      query = query.where('status', '==', filters.status);
-    }
-
-    query = query.orderBy('createdAt', 'desc');
-
-    if (filters?.limit) {
-      query = query.limit(filters.limit);
-    }
-
-    const snapshot = await query.get();
-
-    return snapshot.docs.map((doc) => {
+    let loans = snapshot.docs.map((doc) => {
       const data = doc.data();
       return {
         ...data,
@@ -227,6 +209,26 @@ export class LoansService {
         })) || [],
       } as Loan;
     });
+
+    // Apply filters in-memory
+    if (filters?.merchantId) {
+      loans = loans.filter((loan) => loan.merchantId === filters.merchantId);
+    }
+
+    if (filters?.customerId) {
+      loans = loans.filter((loan) => loan.customerId === filters.customerId);
+    }
+
+    if (filters?.status) {
+      loans = loans.filter((loan) => loan.status === filters.status);
+    }
+
+    // Apply limit if specified
+    if (filters?.limit) {
+      loans = loans.slice(0, filters.limit);
+    }
+
+    return loans;
   }
 
   /**

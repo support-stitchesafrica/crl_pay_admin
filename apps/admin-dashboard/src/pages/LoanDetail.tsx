@@ -4,7 +4,6 @@ import {
   ArrowLeft,
   CreditCard,
   Calendar,
-  DollarSign,
   User,
   Clock,
   CheckCircle,
@@ -19,6 +18,7 @@ import {
 import { getLoan, updateLoanStatus, updateLoanNotes } from '../services/loan.service';
 import { Loan } from '../services/types/loan.types';
 import { showToast } from '../utils/toast';
+import DashboardLayout from '../components/DashboardLayout';
 
 export default function LoanDetail() {
   const { loanId } = useParams<{ loanId: string }>();
@@ -147,12 +147,14 @@ export default function LoanDetail() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading loan details...</p>
+      <DashboardLayout>
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+            <p className="mt-4 text-gray-600">Loading loan details...</p>
+          </div>
         </div>
-      </div>
+      </DashboardLayout>
     );
   }
 
@@ -163,7 +165,8 @@ export default function LoanDetail() {
   const progressPercentage = (loan.amountPaid / loan.configuration.totalAmount) * 100;
 
   return (
-    <div className="p-6">
+    <DashboardLayout>
+      <div>
       {/* Header */}
       <div className="mb-6">
         <Link to="/loans" className="inline-flex items-center text-blue-600 hover:text-blue-800 mb-4">
@@ -652,6 +655,7 @@ export default function LoanDetail() {
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </DashboardLayout>
   );
 }

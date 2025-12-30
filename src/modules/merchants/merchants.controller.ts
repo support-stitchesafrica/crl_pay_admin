@@ -8,13 +8,15 @@ import {
   Delete,
   Query,
   Request,
+  UseGuards,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse as ApiResponseDecorator } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse as ApiResponseDecorator, ApiBearerAuth } from '@nestjs/swagger';
 import { MerchantsService } from './merchants.service';
 import { CreateMerchantDto } from './dto/create-merchant.dto';
 import { UpdateMerchantDto } from './dto/update-merchant.dto';
 import { ApproveMerchantDto } from './dto/approve-merchant.dto';
 import { ApiResponse } from '../../common/helpers/response.helper';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @ApiTags('Merchants')
 @Controller('merchants')
@@ -56,6 +58,60 @@ export class MerchantsController {
     try {
       const stats = await this.merchantsService.getMerchantStats();
       return ApiResponse.success(stats, 'Statistics retrieved successfully');
+    } catch (error) {
+      return ApiResponse.error(error.message, error);
+    }
+  }
+
+  @Get('me')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get own merchant profile' })
+  @ApiResponseDecorator({ status: 200, description: 'Profile retrieved successfully' })
+  @ApiResponseDecorator({ status: 401, description: 'Unauthorized' })
+  async getProfile(@Request() req: any) {
+    try {
+      const merchantId = req.user?.sub || req.user?.merchantId;
+
+      if (!merchantId) {
+        throw new Error('Merchant ID not found in token');
+      }
+
+      const merchant = await this.merchantsService.findOne(merchantId);
+
+      if (merchant) {
+        const { passwordHash, apiSecret, ...safeProfile } = merchant;
+        return ApiResponse.success(safeProfile, 'Profile retrieved successfully');
+      }
+
+      return ApiResponse.success(merchant, 'Profile retrieved successfully');
+    } catch (error) {
+      return ApiResponse.error(error.message, error);
+    }
+  }
+
+  @Patch('me')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Update own merchant profile' })
+  @ApiResponseDecorator({ status: 200, description: 'Profile updated successfully' })
+  @ApiResponseDecorator({ status: 401, description: 'Unauthorized' })
+  async updateProfile(@Request() req: any, @Body() updateDto: UpdateMerchantDto) {
+    try {
+      const merchantId = req.user?.sub || req.user?.merchantId;
+
+      if (!merchantId) {
+        throw new Error('Merchant ID not found in token');
+      }
+
+      const merchant = await this.merchantsService.updateProfile(merchantId, updateDto);
+
+      if (merchant) {
+        const { passwordHash, apiSecret, ...safeProfile } = merchant;
+        return ApiResponse.success(safeProfile, 'Profile updated successfully');
+      }
+
+      return ApiResponse.success(merchant, 'Profile updated successfully');
     } catch (error) {
       return ApiResponse.error(error.message, error);
     }

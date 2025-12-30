@@ -13,6 +13,7 @@ import { PaymentsModule } from './modules/payments/payments.module';
 import { WebhooksModule } from './modules/webhooks/webhooks.module';
 import { DefaultsModule } from './modules/defaults/defaults.module';
 import { AnalyticsModule } from './modules/analytics/analytics.module';
+import { FinanciersModule } from './modules/financiers/financiers.module';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { AnalyticsModule } from './modules/analytics/analytics.module';
     WebhooksModule,
     DefaultsModule,
     AnalyticsModule,
+    FinanciersModule,
   ],
   controllers: [AppController],
   providers: [AppService],

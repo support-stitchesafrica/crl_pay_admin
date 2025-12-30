@@ -9,7 +9,8 @@ export interface Merchant {
   state?: string;
   businessAddress?: string;
   businessCategory?: string;
-  status: 'pending' | 'active' | 'suspended' | 'rejected';
+  cacNumber?: string;
+  status: 'pending' | 'approved' | 'suspended' | 'rejected';
   apiKey?: string;
   webhookUrl?: string;
   totalTransactions?: number;
@@ -129,6 +130,114 @@ export interface DashboardStats {
   totalLoansValue: number;
   defaultRate: number;
   collectionRate: number;
+}
+
+// Financier Types
+export interface Financier {
+  financierId: string;
+  companyName: string;
+  email: string;
+  phone: string;
+  businessAddress: string;
+  businessCategory: string;
+  registrationNumber: string;
+  taxId: string;
+  status: 'pending' | 'approved' | 'rejected' | 'suspended';
+  availableFunds: number;
+  allocatedFunds: number;
+  totalDisbursed: number;
+  totalRepaid: number;
+  settlementAccount?: {
+    bankName: string;
+    accountNumber: string;
+    accountName: string;
+  };
+  businessDocuments?: Record<string, any>;
+  approvedBy?: string;
+  approvedAt?: string | { _seconds: number; _nanoseconds: number };
+  adminNotes?: string;
+  createdAt: string | { _seconds: number; _nanoseconds: number };
+  updatedAt: string | { _seconds: number; _nanoseconds: number };
+  lastLoginAt?: string | { _seconds: number; _nanoseconds: number };
+}
+
+export type TenorPeriod = 'DAYS' | 'WEEKS' | 'MONTHS' | 'YEARS';
+
+export interface Tenor {
+  value: number;
+  period: TenorPeriod;
+}
+
+export interface GracePeriod {
+  value: number;
+  period: TenorPeriod;
+}
+
+export interface FinancingPlan {
+  planId: string;
+  financierId: string;
+  financierName?: string;
+  name: string;
+  description?: string;
+  tenor: Tenor;
+  interestRate: number;
+  minimumAmount: number;
+  maximumAmount: number;
+  gracePeriod: GracePeriod;
+  lateFee: {
+    type: 'fixed' | 'percentage';
+    amount: number;
+  };
+  allowEarlyRepayment: boolean;
+  eligibilityCriteria?: {
+    minCreditScore?: number;
+    minMonthlyIncome?: number;
+    maxDebtToIncome?: number;
+    minEmploymentMonths?: number;
+    allowedEmailDomains?: string[];
+    allowedCategories?: string[];
+  };
+  status: 'pending' | 'approved' | 'inactive';
+  isActive: boolean;
+  expiresAt?: string | { _seconds: number; _nanoseconds: number };
+  totalFundsAllocated: number;
+  fundsAllocatedToMerchants?: number;
+  totalLoansCreated: number;
+  createdAt: string | { _seconds: number; _nanoseconds: number };
+  updatedAt: string | { _seconds: number; _nanoseconds: number };
+  approvedAt?: string | { _seconds: number; _nanoseconds: number };
+  activatedAt?: string | { _seconds: number; _nanoseconds: number };
+  deactivatedAt?: string | { _seconds: number; _nanoseconds: number };
+}
+
+export interface PlanMerchantMapping {
+  mappingId: string;
+  planId: string;
+  merchantId: string;
+  financierId: string;
+  fundsAllocated: number;
+  expirationDate: string | { _seconds: number; _nanoseconds: number };
+  currentAllocation: number;
+  status: 'active' | 'inactive' | 'suspended';
+  totalLoans: number;
+  totalDisbursed: number;
+  totalRepaid: number;
+  defaultRate: number;
+  mappedBy: string;
+  mappedAt: string | { _seconds: number; _nanoseconds: number };
+  lastTransactionAt?: string | { _seconds: number; _nanoseconds: number };
+  createdAt: string | { _seconds: number; _nanoseconds: number };
+  updatedAt: string | { _seconds: number; _nanoseconds: number };
+}
+
+export interface FinancierStats {
+  total: number;
+  pending: number;
+  approved: number;
+  rejected: number;
+  suspended: number;
+  totalFunds: number;
+  totalDisbursed: number;
 }
 
 // Auth Types

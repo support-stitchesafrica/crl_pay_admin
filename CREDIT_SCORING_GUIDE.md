@@ -225,6 +225,104 @@ The system automatically declines if ANY of these conditions are met:
 ❌ More than 2 defaulted loans
 ❌ 3 or more active loans
 ❌ Credit score < 400
+❌ Does not meet financier's eligibility criteria (if using financier plan)
+```
+
+### Financier Eligibility Rules
+
+When a loan is being financed through a **financier's plan**, additional eligibility checks are performed based on the plan's `eligibilityCriteria`:
+
+#### 1. Credit Score Requirements
+```typescript
+if (plan.eligibilityCriteria.minCreditScore) {
+  if (customer.creditScore < plan.eligibilityCriteria.minCreditScore) {
+    return 'declined'; // Does not meet minimum credit score
+  }
+}
+```
+
+#### 2. Income Verification
+```typescript
+if (plan.eligibilityCriteria.minMonthlyIncome) {
+  if (customer.estimatedMonthlyIncome < plan.eligibilityCriteria.minMonthlyIncome) {
+    return 'declined'; // Insufficient income
+  }
+}
+```
+
+#### 3. Debt-to-Income Ratio
+```typescript
+if (plan.eligibilityCriteria.maxDebtToIncome) {
+  const dtiRatio = customer.totalDebt / customer.monthlyIncome;
+  if (dtiRatio > plan.eligibilityCriteria.maxDebtToIncome) {
+    return 'declined'; // Debt-to-income ratio too high
+  }
+}
+```
+
+#### 4. Employment Duration
+```typescript
+if (plan.eligibilityCriteria.minEmploymentMonths) {
+  if (customer.employmentMonths < plan.eligibilityCriteria.minEmploymentMonths) {
+    return 'declined'; // Employment duration too short
+  }
+}
+```
+
+#### 5. Email Domain Whitelisting (Corporate Staff)
+```typescript
+if (plan.eligibilityCriteria.allowedEmailDomains?.length > 0) {
+  const customerDomain = '@' + customer.email.split('@')[1];
+  if (!plan.eligibilityCriteria.allowedEmailDomains.includes(customerDomain)) {
+    return 'declined'; // Email domain not whitelisted
+  }
+}
+```
+
+#### 6. Product Category Filtering
+```typescript
+if (plan.eligibilityCriteria.allowedCategories?.length > 0) {
+  if (!plan.eligibilityCriteria.allowedCategories.includes(product.category)) {
+    return 'declined'; // Product category not allowed for this plan
+  }
+}
+```
+
+### Combined Decision Flow
+
+When using a financier plan, the decision flow becomes:
+
+```typescript
+// Step 1: Standard Credit Assessment (0-1000 score)
+const creditScore = await assessCreditworthiness(customer);
+
+// Step 2: Check Auto-Decline Conditions
+if (hasAutoDeclineConditions(customer, creditScore)) {
+  return 'declined';
+}
+
+// Step 3: Check Financier Eligibility Rules (if applicable)
+if (fundingSource === 'financier' && plan.eligibilityCriteria) {
+  const eligibilityCheck = await checkFinancierEligibility(
+    customer,
+    plan.eligibilityCriteria,
+    product
+  );
+
+  if (!eligibilityCheck.passed) {
+    return {
+      decision: 'declined',
+      reason: eligibilityCheck.failureReason,
+      // e.g., "Does not meet minimum credit score of 650"
+    };
+  }
+}
+
+// Step 4: Standard Decision Logic
+if (creditScore >= 700 && riskFlags.length === 0) {
+  return 'instant_approval';
+}
+// ... rest of decision logic
 ```
 
 ### Decision Logic

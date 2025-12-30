@@ -1,5 +1,23 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEmail, IsNotEmpty, IsString, MinLength, IsOptional } from 'class-validator';
+import { IsEmail, IsNotEmpty, IsString, MinLength, IsOptional, ValidateNested } from 'class-validator';
+import { Type } from 'class-transformer';
+
+export class SettlementAccountDto {
+  @ApiProperty({ example: 'Access Bank', required: false })
+  @IsOptional()
+  @IsString()
+  bankName?: string;
+
+  @ApiProperty({ example: '0123456789', required: false })
+  @IsOptional()
+  @IsString()
+  accountNumber?: string;
+
+  @ApiProperty({ example: 'Acme Electronics Ltd', required: false })
+  @IsOptional()
+  @IsString()
+  accountName?: string;
+}
 
 export class CreateMerchantDto {
   @ApiProperty({ example: 'Acme Electronics Ltd' })
@@ -57,4 +75,10 @@ export class CreateMerchantDto {
   @IsOptional()
   @IsString()
   websiteUrl?: string;
+
+  @ApiProperty({ type: SettlementAccountDto, required: false })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => SettlementAccountDto)
+  settlementAccount?: SettlementAccountDto;
 }

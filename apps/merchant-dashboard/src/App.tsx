@@ -7,8 +7,13 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import ForgotPassword from './pages/ForgotPassword';
 import Dashboard from './pages/Dashboard';
+import FinancingPlans from './pages/FinancingPlans';
+import Transactions from './pages/Transactions';
+import Customers from './pages/Customers';
 import Loans from './pages/Loans';
 import LoanDetail from './pages/LoanDetail';
+import Analytics from './pages/Analytics';
+import Settings from './pages/Settings';
 
 const queryClient = new QueryClient();
 
@@ -31,10 +36,18 @@ function App() {
               }
             />
             <Route
+              path="/financing-plans"
+              element={
+                <ProtectedRoute>
+                  <FinancingPlans />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/transactions"
               element={
                 <ProtectedRoute>
-                  <Dashboard />
+                  <Transactions />
                 </ProtectedRoute>
               }
             />
@@ -42,7 +55,7 @@ function App() {
               path="/customers"
               element={
                 <ProtectedRoute>
-                  <Dashboard />
+                  <Customers />
                 </ProtectedRoute>
               }
             />
@@ -66,7 +79,7 @@ function App() {
               path="/analytics"
               element={
                 <ProtectedRoute>
-                  <Dashboard />
+                  <Analytics />
                 </ProtectedRoute>
               }
             />
@@ -74,7 +87,7 @@ function App() {
               path="/settings"
               element={
                 <ProtectedRoute>
-                  <Dashboard />
+                  <Settings />
                 </ProtectedRoute>
               }
             />

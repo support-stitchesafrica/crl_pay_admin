@@ -55,11 +55,6 @@ async function bootstrap() {
     .setDescription('API documentation for CRL Pay Buy Now Pay Later (BNPL) System')
     .setVersion('1.0')
     .addBearerAuth()
-    // .addTag('Merchants', 'Merchant onboarding and management')
-    // .addTag('Customers', 'Customer onboarding and profile management')
-    // .addTag('Payments', 'Payment processing and collection')
-    // .addTag('Webhooks', 'Webhook management')
-    // .addTag('Analytics', 'Merchant analytics and reporting')
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
@@ -70,7 +65,7 @@ async function bootstrap() {
 
   // CORS configuration
   app.enableCors({
-    origin: process.env.CORS_ORIGIN?.split(',') || ['http://localhost:3007', 'http://localhost:3008', 'http://localhost:3009'],
+    origin: process.env.CORS_ORIGIN?.split(',') || ['http://localhost:3007', 'http://localhost:3008', 'http://localhost:3009', 'http://localhost:3010'],
     methods: process.env.CORS_METHODS || 'GET,HEAD,PUT,PATCH,POST,DELETE',
     credentials: process.env.CORS_CREDENTIALS === 'true',
   });

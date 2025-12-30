@@ -12,6 +12,8 @@ import {
   X,
   Bell,
   User,
+  Building2,
+  Link as LinkIcon,
 } from 'lucide-react';
 
 interface DashboardLayoutProps {
@@ -20,7 +22,10 @@ interface DashboardLayoutProps {
 
 const menuItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
-  { icon: Users, label: 'Merchant Approvals', path: '/approvals' },
+  { icon: Users, label: 'Merchants', path: '/merchants' },
+  { icon: Building2, label: 'Financiers', path: '/financiers' },
+  { icon: FileText, label: 'Financing Plans', path: '/financing-plans' },
+  { icon: LinkIcon, label: 'Plan Mappings', path: '/plan-mappings' },
   { icon: User, label: 'Customers', path: '/customers' },
   { icon: FileText, label: 'Loans', path: '/loans' },
   { icon: BarChart3, label: 'Analytics', path: '/analytics' },

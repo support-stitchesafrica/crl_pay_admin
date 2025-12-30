@@ -1,6 +1,8 @@
 import axios from 'axios';
 
-const API_URL = 'http://localhost:3006/api/v1';
+// Use relative URL to leverage Vite's proxy in development
+// In production, this should be set via environment variable
+const API_URL = import.meta.env.VITE_API_URL || '/api/v1';
 
 // Create axios instance with interceptor for auth token
 const api = axios.create({

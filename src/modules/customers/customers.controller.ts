@@ -8,6 +8,7 @@ import {
   Delete,
   UseGuards,
   Logger,
+  Request,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -88,10 +89,35 @@ export class CustomersController {
     );
   }
 
+  @Get('me')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get own customers (Merchant only)' })
+  @ApiResponseDecorator({
+    status: 200,
+    description: 'Merchant customers retrieved successfully',
+  })
+  @ApiResponseDecorator({ status: 401, description: 'Unauthorized' })
+  async getMyCustomers(@Request() req: any) {
+    const merchantId = req.user?.sub || req.user?.merchantId;
+
+    if (!merchantId) {
+      throw new Error('Merchant ID not found in token');
+    }
+
+    this.logger.log(`GET /customers/me - Fetching customers for merchant ${merchantId}`);
+    const customers = await this.customersService.findByMerchant(merchantId);
+    this.logger.log(`Found ${customers.length} customers for merchant ${merchantId}`);
+    return ApiResponse.success(
+      customers,
+      'Merchant customers retrieved successfully',
+    );
+  }
+
   @Get('merchant/:merchantId')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get customers by merchant' })
+  @ApiOperation({ summary: 'Get customers by merchant ID (Admin only)' })
   @ApiParam({ name: 'merchantId', description: 'Merchant ID' })
   @ApiResponseDecorator({
     status: 200,

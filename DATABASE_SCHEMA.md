@@ -5,17 +5,20 @@ This document describes the Firebase Firestore database schema for the CRL Pay B
 ## Collections Overview
 
 1. **crl_merchants** - Merchant/Partner information
-2. **crl_customers** - Customer profiles and data
-3. **crl_credit_assessments** - Credit decision records
-4. **crl_loans** - Active and completed loans
-5. **crl_payments** - Individual payment/installment records
-6. **crl_transactions** - Transaction log for audit trail
-7. **crl_notifications** - Notification delivery log
-8. **crl_merchant_settlements** - Merchant payment settlements
-9. **crl_defaults** - Default management and collection tracking
-10. **crl_merchant_analytics** - Aggregated analytics data
-11. **crl_merchant_loan_configs** - Merchant-specific loan configurations
-12. **crl_webhooks** - Webhook subscriptions and delivery logs
+2. **crl_financiers** - Financier/Funding institution information
+3. **crl_financing_plans** - Financier-created loan plans
+4. **crl_plan_merchant_mappings** - Mapping of plans to merchants
+5. **crl_customers** - Customer profiles and data
+6. **crl_credit_assessments** - Credit decision records
+7. **crl_loans** - Active and completed loans
+8. **crl_payments** - Individual payment/installment records
+9. **crl_transactions** - Transaction log for audit trail
+10. **crl_notifications** - Notification delivery log
+11. **crl_merchant_settlements** - Merchant payment settlements
+12. **crl_defaults** - Default management and collection tracking
+13. **crl_merchant_analytics** - Aggregated analytics data
+14. **crl_merchant_loan_configs** - Merchant-specific loan configurations
+15. **crl_webhooks** - Webhook subscriptions and delivery logs
 
 ---
 
@@ -96,7 +99,210 @@ Stores information about merchants integrated with CRL Pay.
 
 ---
 
-## 2. Collection: `crl_customers`
+## 2. Collection: `crl_financiers`
+
+Stores information about financiers (funding institutions) that provide capital for BNPL financing.
+
+### Document Structure
+
+```typescript
+{
+  financierId: string;             // Unique financier identifier (document ID)
+  companyName: string;             // Registered company name
+  email: string;                   // Business email
+  phone: string;                   // Business phone
+  passwordHash: string;            // Hashed password for authentication
+  status: 'pending' | 'approved' | 'rejected' | 'suspended';
+
+  // Business Details
+  businessAddress: string;
+  businessCategory: string;        // e.g., 'Bank', 'Microfinance', 'Investment Firm'
+  registrationNumber: string;      // Company registration number
+  taxId: string;
+
+  // Financial Information
+  availableFunds: number;          // Total funds available for financing
+  allocatedFunds: number;          // Funds currently allocated to active loans
+  totalDisbursed: number;          // Lifetime disbursed amount
+  totalRepaid: number;             // Lifetime repaid amount
+
+  // Settlement Account
+  settlementAccount: {
+    bankName: string;
+    accountNumber: string;
+    accountName: string;
+  };
+
+  // Business Documents
+  businessDocuments: {
+    cacDocument?: string;          // URL to CAC document
+    operatingLicense?: string;     // URL to operating license
+    proofOfFunds?: string;         // URL to proof of funds document
+  };
+
+  // Admin Review Data
+  adminNotes?: string;             // Admin notes from approval/rejection
+  approvedBy?: string;             // Admin ID who approved
+  approvedAt?: Timestamp;
+
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+  lastLoginAt?: Timestamp;
+}
+```
+
+### Indexes
+- `email` (for login/lookup)
+- `status` (for filtering pending/approved financiers)
+- `createdAt` (for sorting)
+
+### Important Notes
+- **Funds Management**: System tracks available vs allocated funds
+- **Status Flow**: pending → approved/rejected (admin decision)
+- **Multi-tenancy**: Each financier operates independently with their own plans
+
+---
+
+## 3. Collection: `crl_financing_plans`
+
+Stores financing plans created by financiers with specific terms and eligibility rules.
+
+### Document Structure
+
+```typescript
+{
+  planId: string;                  // Unique plan identifier (document ID)
+  financierId: string;             // Reference to financier who created this plan
+
+  // Plan Details
+  name: string;                    // Plan name (e.g., "6-Month Standard", "Quick Cash")
+  description?: string;            // Plan description
+
+  // Loan Terms
+  duration: number;                // Duration in months
+  installments: number;            // Number of installments
+  interestRate: number;            // Interest rate percentage (e.g., 5 for 5%)
+  minAmount: number;               // Minimum loan amount (e.g., 10000)
+  maxAmount: number;               // Maximum loan amount (e.g., 500000)
+
+  // Payment Terms
+  gracePeriod: number;             // Grace period in days before late fees apply
+  lateFee: {
+    type: 'fixed' | 'percentage';
+    amount: number;                // Amount or percentage
+  };
+  allowEarlyRepayment: boolean;    // Whether early repayment is allowed
+
+  // Eligibility Criteria (optional - for advanced filtering)
+  eligibilityCriteria?: {
+    minCreditScore?: number;       // Minimum credit score required
+    minMonthlyIncome?: number;     // Minimum monthly income
+    maxDebtToIncome?: number;      // Maximum debt-to-income ratio
+    minEmploymentMonths?: number;  // Minimum employment duration
+    allowedEmailDomains?: string[]; // Whitelisted email domains (for corporate staff)
+    allowedCategories?: string[];  // Allowed product categories
+  };
+
+  // Subsidy Configuration (future enhancement)
+  subsidy?: {
+    enabled: boolean;
+    percentage: number;            // Percentage of interest subsidized
+    maxSubsidyAmount: number;      // Maximum subsidy per loan
+  };
+
+  // Status & Availability
+  status: 'active' | 'inactive' | 'suspended';
+  totalFundsAllocated: number;     // Total funds allocated to this plan
+  totalLoansCreated: number;       // Number of loans created under this plan
+
+  // Timestamps
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+  activatedAt?: Timestamp;
+  deactivatedAt?: Timestamp;
+}
+```
+
+### Indexes
+- `financierId` (for financier-specific plans)
+- `status` (for active plans)
+- `createdAt` (for sorting)
+
+### Important Notes
+- **Plan Flexibility**: Each financier can create multiple plans with different terms
+- **Eligibility Rules**: Plans can have specific criteria for who can access them
+- **Fund Allocation**: Tracks how much capital is tied to each plan
+
+---
+
+## 4. Collection: `crl_plan_merchant_mappings`
+
+Maps financing plans to merchants, controlling which merchants can offer which plans to their customers. Created by CRL Pay Admin.
+
+### Document Structure
+
+```typescript
+{
+  mappingId: string;               // Unique mapping identifier (document ID)
+  planId: string;                  // Reference to financing plan
+  merchantId: string;              // Reference to merchant
+  financierId: string;             // Reference to financier (for quick lookup)
+
+  // Mapping Details
+  status: 'active' | 'inactive' | 'pending_approval';
+
+  // Usage Tracking
+  availableFunds: number;          // Funds available for this merchant from this plan
+  allocatedFunds: number;          // Funds currently tied up in active loans
+  totalDisbursed: number;          // Lifetime disbursed to this merchant
+  totalRepaid: number;             // Lifetime repaid from this merchant
+
+  // Limits (optional - can override plan limits)
+  merchantSpecificLimits?: {
+    maxLoanAmount?: number;        // Override plan's max amount for this merchant
+    maxActiveLoa ns?: number;       // Max active loans allowed for this merchant
+    monthlyDisbursementLimit?: number; // Max disbursement per month
+  };
+
+  // Performance Metrics
+  performanceMetrics: {
+    totalLoans: number;            // Total loans created
+    activeLoans: number;           // Currently active loans
+    completedLoans: number;        // Successfully completed loans
+    defaultedLoans: number;        // Defaulted loans
+    defaultRate: number;           // Default rate percentage
+    repaymentRate: number;         // Repayment rate percentage
+  };
+
+  // Admin Approval
+  approvedBy?: string;             // Admin ID who approved mapping
+  approvedAt?: Timestamp;
+  notes?: string;                  // Admin notes on the mapping
+
+  // Timestamps
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+  activatedAt?: Timestamp;
+}
+```
+
+### Indexes
+- `planId` (for plan-specific mappings)
+- `merchantId` (for merchant-specific mappings)
+- `financierId` (for financier-specific mappings)
+- `status` (for active mappings)
+- Composite: `merchantId + status` (for merchant's active plans)
+- Composite: `planId + status` (for plan's active merchants)
+
+### Important Notes
+- **Admin-Controlled**: Only CRL Pay admins can create/approve plan mappings
+- **Fund Allocation**: Each mapping tracks available funds for that specific merchant-plan combination
+- **Performance Tracking**: Monitors merchant's performance with each financing plan
+- **Approval Workflow**: Mappings require admin approval before becoming active
+
+---
+
+## 5. Collection: `crl_customers`
 
 Customer profiles tied to merchants, supporting cross-merchant credit history.
 
@@ -239,9 +445,13 @@ Active and historical loan records with flexible tenor and frequency configurati
   loanId: string;                  // Unique loan ID (document ID)
   customerId: string;
   merchantId: string;
+  financierId?: string;            // Reference to financier (if funded by financier)
+  planId?: string;                 // Reference to financing plan (if using financier plan)
+  mappingId?: string;              // Reference to plan-merchant mapping
 
   // Loan Details
   principalAmount: number;         // Original amount borrowed
+  fundingSource: 'merchant' | 'financier';  // Who is funding this loan
 
   // Loan Configuration (calculated at creation)
   configuration: {
@@ -331,9 +541,14 @@ pending → cancelled
 ### Indexes
 - `customerId` (for customer loan history)
 - `merchantId` (for merchant analytics)
+- `financierId` (for financier analytics)
+- `planId` (for plan performance tracking)
+- `fundingSource` (for segregating merchant vs financier funded loans)
 - `status` (for active loan queries)
 - `createdAt` (for sorting)
 - `paymentSchedule.dueDate` (for payment processing)
+- Composite: `financierId + status` (for financier's active loans)
+- Composite: `planId + status` (for plan's active loans)
 
 ---
 

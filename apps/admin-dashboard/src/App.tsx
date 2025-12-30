@@ -6,10 +6,15 @@ import ProtectedRoute from './components/ProtectedRoute';
 import Login from './pages/Login';
 import ForgotPassword from './pages/ForgotPassword';
 import Dashboard from './pages/Dashboard';
-import MerchantApproval from './pages/MerchantApproval';
+import Merchants from './pages/Merchants';
 import Customers from './pages/Customers';
 import Loans from './pages/Loans';
 import LoanDetail from './pages/LoanDetail';
+import Financiers from './pages/Financiers';
+import FinancingPlans from './pages/FinancingPlans';
+import PlanMerchantMapping from './pages/PlanMerchantMapping';
+import Settings from './pages/Settings';
+import Analytics from './pages/Analytics';
 
 const queryClient = new QueryClient();
 
@@ -31,10 +36,10 @@ function App() {
               }
             />
             <Route
-              path="/approvals"
+              path="/merchants"
               element={
                 <ProtectedRoute>
-                  <MerchantApproval />
+                  <Merchants />
                 </ProtectedRoute>
               }
             />
@@ -66,7 +71,7 @@ function App() {
               path="/analytics"
               element={
                 <ProtectedRoute>
-                  <Dashboard />
+                  <Analytics />
                 </ProtectedRoute>
               }
             />
@@ -74,7 +79,31 @@ function App() {
               path="/settings"
               element={
                 <ProtectedRoute>
-                  <Dashboard />
+                  <Settings />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/financiers"
+              element={
+                <ProtectedRoute>
+                  <Financiers />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/financing-plans"
+              element={
+                <ProtectedRoute>
+                  <FinancingPlans />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/plan-mappings"
+              element={
+                <ProtectedRoute>
+                  <PlanMerchantMapping />
                 </ProtectedRoute>
               }
             />

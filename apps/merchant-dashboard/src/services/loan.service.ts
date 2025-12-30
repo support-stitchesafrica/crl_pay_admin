@@ -20,7 +20,7 @@ export interface LoanStatsResponse {
 }
 
 /**
- * Get all loans for a merchant
+ * Get all loans for authenticated merchant (uses JWT token)
  */
 export const getLoans = async (filters?: {
   customerId?: string;
@@ -29,18 +29,14 @@ export const getLoans = async (filters?: {
 }): Promise<Loan[]> => {
   const params = new URLSearchParams();
 
-  // Get merchant ID from localStorage
-  const merchantData = localStorage.getItem('merchant_data');
-  if (merchantData) {
-    const merchant = JSON.parse(merchantData);
-    params.append('merchantId', merchant.merchantId);
-  }
-
   if (filters?.customerId) params.append('customerId', filters.customerId);
   if (filters?.status) params.append('status', filters.status);
   if (filters?.limit) params.append('limit', filters.limit.toString());
 
-  const response = await api.get<LoansResponse>(`/loans?${params.toString()}`);
+  const queryString = params.toString();
+  const url = queryString ? `/loans/me?${queryString}` : '/loans/me';
+
+  const response = await api.get<LoansResponse>(url);
 
   if (!response.data.success) {
     throw new Error(response.data.message || 'Failed to fetch loans');
@@ -82,18 +78,10 @@ export const createLoan = async (
 };
 
 /**
- * Get loan statistics for merchant
+ * Get loan statistics for authenticated merchant (uses JWT token)
  */
 export const getMerchantLoanStats = async (): Promise<LoanStats> => {
-  const merchantData = localStorage.getItem('merchant_data');
-  if (!merchantData) {
-    throw new Error('Merchant data not found');
-  }
-
-  const merchant = JSON.parse(merchantData);
-  const response = await api.get<LoanStatsResponse>(
-    `/loans/merchant/${merchant.merchantId}/stats`
-  );
+  const response = await api.get<LoanStatsResponse>('/loans/me/stats');
 
   if (!response.data.success) {
     throw new Error(response.data.message || 'Failed to fetch statistics');

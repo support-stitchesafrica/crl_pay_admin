@@ -28,7 +28,7 @@ export class NotificationsService {
    * Send login notification to admin
    */
   async sendLoginNotificationToAdmin(
-    userType: 'merchant' | 'admin',
+    userType: 'merchant' | 'admin' | 'financier',
     email: string,
     name: string,
     ipAddress?: string,
@@ -387,5 +387,39 @@ export class NotificationsService {
    */
   async sendForgotPasswordOTP(email: string, otp: string, userType: 'merchant' | 'admin'): Promise<void> {
     return this.emailService.sendForgotPasswordOTP(email, otp, userType);
+  }
+
+  /**
+   * Send financier registration notifications
+   */
+  async sendFinancierRegistrationEmail(financierEmail: string, companyName: string): Promise<void> {
+    return this.emailService.sendFinancierRegistrationEmail(financierEmail, companyName);
+  }
+
+  async sendFinancierApprovalEmail(financierEmail: string, companyName: string, notes?: string): Promise<void> {
+    return this.emailService.sendFinancierApprovalEmail(financierEmail, companyName, notes);
+  }
+
+  async sendFinancierRejectionEmail(financierEmail: string, companyName: string, reason?: string): Promise<void> {
+    return this.emailService.sendFinancierRejectionEmail(financierEmail, companyName, reason);
+  }
+
+  /**
+   * Send new financing plan notification to admin
+   */
+  async sendPlanCreationNotificationToAdmin(data: {
+    financierName: string;
+    financierEmail: string;
+    planName: string;
+    planDescription?: string;
+    interestRate: number;
+    tenorValue: number;
+    tenorPeriod: string;
+    minimumAmount: number;
+    maximumAmount: number;
+    gracePeriodValue: number;
+    gracePeriodPeriod: string;
+  }): Promise<void> {
+    return this.emailService.sendPlanCreationNotificationToAdmin(data);
   }
 }

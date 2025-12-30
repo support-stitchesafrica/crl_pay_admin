@@ -59,6 +59,16 @@ export class MerchantsService {
         businessAddress,
         businessCategory: createMerchantDto.businessCategory,
         status: 'pending',
+        settlementAccount: {
+          bankName: createMerchantDto.settlementAccount?.bankName || '',
+          accountNumber: createMerchantDto.settlementAccount?.accountNumber || '',
+          accountName: createMerchantDto.settlementAccount?.accountName || '',
+        },
+        // Initialize analytics fields
+        totalRevenue: 0,
+        totalTransactions: 0,
+        activeCustomers: 0,
+        defaultRate: 0,
         createdAt: new Date(),
         updatedAt: new Date(),
       };
@@ -109,15 +119,26 @@ export class MerchantsService {
   }
 
   async findOne(merchantId: string): Promise<Merchant> {
+    this.logger.log(`Finding merchant with ID: ${merchantId}`);
     const doc = await this.merchantsCollection.doc(merchantId).get();
 
     if (!doc.exists) {
+      this.logger.warn(`Merchant not found with ID: ${merchantId}`);
       throw new NotFoundException('Merchant not found');
     }
 
     const data = doc.data() as Merchant;
+    this.logger.log(`Merchant found: ${data.businessName}`);
     const { passwordHash, ...merchantData } = data;
-    return merchantData as Merchant;
+
+    // Ensure analytics fields have default values for older merchants
+    return {
+      ...merchantData,
+      totalRevenue: merchantData.totalRevenue ?? 0,
+      totalTransactions: merchantData.totalTransactions ?? 0,
+      activeCustomers: merchantData.activeCustomers ?? 0,
+      defaultRate: merchantData.defaultRate ?? 0,
+    } as Merchant;
   }
 
   async findByEmail(email: string): Promise<Merchant | null> {
@@ -152,6 +173,78 @@ export class MerchantsService {
       return this.findOne(merchantId);
     } catch (error) {
       this.logger.error('Error updating merchant:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update merchant profile (used by merchants themselves)
+   * Only allows updating specific fields
+   */
+  async updateProfile(merchantId: string, updates: any): Promise<Merchant> {
+    try {
+      this.logger.log(`Merchant updating own profile: ${merchantId}`);
+
+      const merchantRef = this.merchantsCollection.doc(merchantId);
+      const doc = await merchantRef.get();
+
+      if (!doc.exists) {
+        this.logger.warn(`Merchant not found: ${merchantId}`);
+        throw new NotFoundException('Merchant not found');
+      }
+
+      // Only allow updating certain fields
+      const allowedUpdates: any = {
+        updatedAt: new Date(),
+      };
+
+      if (updates.phone !== undefined) {
+        allowedUpdates.phone = updates.phone;
+      }
+
+      if (updates.businessAddress !== undefined) {
+        allowedUpdates.businessAddress = updates.businessAddress;
+      }
+
+      if (updates.websiteUrl !== undefined) {
+        allowedUpdates.websiteUrl = updates.websiteUrl;
+      }
+
+      if (updates.businessCategory !== undefined) {
+        allowedUpdates.businessCategory = updates.businessCategory;
+      }
+
+      if (updates.cacNumber !== undefined) {
+        allowedUpdates.cacNumber = updates.cacNumber;
+      }
+
+      if (updates.settlementAccount !== undefined) {
+        // Convert to plain object to avoid Firestore serialization issues
+        allowedUpdates.settlementAccount = {
+          bankName: updates.settlementAccount.bankName || '',
+          accountNumber: updates.settlementAccount.accountNumber || '',
+          accountName: updates.settlementAccount.accountName || '',
+          ...(updates.settlementAccount.bankCode && { bankCode: updates.settlementAccount.bankCode }),
+        };
+
+        // Also update legacy fields for backward compatibility
+        if (updates.settlementAccount.bankName) {
+          allowedUpdates.bankName = updates.settlementAccount.bankName;
+        }
+        if (updates.settlementAccount.accountNumber) {
+          allowedUpdates.accountNumber = updates.settlementAccount.accountNumber;
+        }
+        if (updates.settlementAccount.accountName) {
+          allowedUpdates.accountName = updates.settlementAccount.accountName;
+        }
+      }
+
+      await merchantRef.update(allowedUpdates);
+
+      this.logger.log(`Merchant profile updated successfully: ${merchantId}`);
+      return this.findOne(merchantId);
+    } catch (error) {
+      this.logger.error('Error updating merchant profile:', error);
       throw error;
     }
   }

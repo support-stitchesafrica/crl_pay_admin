@@ -167,15 +167,16 @@ export class CustomersService {
     try {
       this.logger.log(`Fetching customers for merchant: ${merchantId}`);
 
+      // Fetch all customers ordered by createdAt
+      // We filter in-memory to avoid Firestore composite index requirement
       const snapshot = await this.customersCollection
-        .where('registeredVia', '==', merchantId)
         .orderBy('createdAt', 'desc')
         .get();
 
-      const customers: Customer[] = [];
-      snapshot.forEach((doc) => {
-        customers.push(doc.data() as Customer);
-      });
+      const allCustomers = snapshot.docs.map((doc) => doc.data() as Customer);
+
+      // Filter by merchantId in-memory
+      const customers = allCustomers.filter((customer) => customer.registeredVia === merchantId);
 
       this.logger.log(`Found ${customers.length} customers for merchant ${merchantId}`);
       return customers;

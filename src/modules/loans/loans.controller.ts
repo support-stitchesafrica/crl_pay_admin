@@ -9,6 +9,7 @@ import {
   HttpCode,
   HttpStatus,
   UseGuards,
+  Request,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse as ApiResponseDecorator, ApiBearerAuth } from '@nestjs/swagger';
 import { LoansService } from './loans.service';
@@ -74,9 +75,59 @@ export class LoansController {
     }
   }
 
+  @Get('me')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Get own loans (Merchant only)' })
+  @ApiResponseDecorator({ status: 200, description: 'Loans retrieved successfully' })
+  @ApiResponseDecorator({ status: 401, description: 'Unauthorized' })
+  async getMyLoans(
+    @Request() req: any,
+    @Query('customerId') customerId?: string,
+    @Query('status') status?: string,
+    @Query('limit') limit?: number,
+  ) {
+    try {
+      const merchantId = req.user?.sub || req.user?.merchantId;
+
+      if (!merchantId) {
+        throw new Error('Merchant ID not found in token');
+      }
+
+      const loans = await this.loansService.findAll({
+        merchantId,
+        customerId,
+        status,
+        limit,
+      });
+      return ApiResponse.success(loans, 'Loans retrieved successfully');
+    } catch (error) {
+      return ApiResponse.error(error.message, error);
+    }
+  }
+
+  @Get('me/stats')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Get own loan statistics (Merchant only)' })
+  @ApiResponseDecorator({ status: 200, description: 'Statistics retrieved successfully' })
+  @ApiResponseDecorator({ status: 401, description: 'Unauthorized' })
+  async getMyStats(@Request() req: any) {
+    try {
+      const merchantId = req.user?.sub || req.user?.merchantId;
+
+      if (!merchantId) {
+        throw new Error('Merchant ID not found in token');
+      }
+
+      const stats = await this.loansService.getMerchantStats(merchantId);
+      return ApiResponse.success(stats, 'Statistics retrieved successfully');
+    } catch (error) {
+      return ApiResponse.error(error.message, error);
+    }
+  }
+
   @Get()
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Get all loans with optional filters' })
+  @ApiOperation({ summary: 'Get all loans with optional filters (Admin/Financier)' })
   @ApiResponseDecorator({ status: 200, description: 'Loans retrieved successfully' })
   async findAll(
     @Query('merchantId') merchantId?: string,
@@ -99,7 +150,7 @@ export class LoansController {
 
   @Get('merchant/:merchantId/stats')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Get loan statistics for a merchant' })
+  @ApiOperation({ summary: 'Get loan statistics for a merchant (Admin/Financier)' })
   @ApiResponseDecorator({ status: 200, description: 'Statistics retrieved successfully' })
   async getMerchantStats(@Param('merchantId') merchantId: string) {
     try {

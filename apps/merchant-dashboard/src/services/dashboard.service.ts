@@ -6,10 +6,10 @@ import * as customerService from './customer.service';
  * Get merchant dashboard statistics
  * Aggregates data from merchant and customer services
  */
-export const getStats = async (merchantId: string): Promise<MerchantDashboardStats> => {
-  // Get merchant profile for basic stats
+export const getStats = async (): Promise<MerchantDashboardStats> => {
+  // Get merchant profile and customers using JWT token
   const merchant = await merchantService.getProfile();
-  const customers = await customerService.getByMerchant(merchantId);
+  const customers = await customerService.getMyCustomers();
 
   // Calculate stats from available data
   return {

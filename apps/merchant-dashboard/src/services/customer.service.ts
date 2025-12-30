@@ -3,6 +3,15 @@ import { Customer } from './types';
 
 /**
  * Get customers registered via this merchant
+ * Uses JWT token to identify the merchant
+ */
+export const getMyCustomers = async (): Promise<Customer[]> => {
+  const response = await api.get('/customers/me');
+  return response.data.data;
+};
+
+/**
+ * @deprecated Use getMyCustomers() instead
  */
 export const getByMerchant = async (merchantId: string): Promise<Customer[]> => {
   const response = await api.get(`/customers/merchant/${merchantId}`);

@@ -9,10 +9,13 @@ import {
   AlertTriangle,
   Search,
   Filter,
+  Loader2,
 } from 'lucide-react';
+import DashboardLayout from '../components/DashboardLayout';
 import { getLoans, getMerchantLoanStats } from '../services/loan.service';
 import { Loan, LoanStats } from '../services/types/loan.types';
 import { showToast } from '../utils/toast';
+import { Input } from '../components/ui';
 
 export default function Loans() {
   const [loans, setLoans] = useState<Loan[]>([]);
@@ -89,17 +92,17 @@ export default function Loans() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading loans...</p>
+      <DashboardLayout>
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="w-8 h-8 animate-spin text-green-600" />
         </div>
-      </div>
+      </DashboardLayout>
     );
   }
 
   return (
-    <div className="p-6">
+    <DashboardLayout>
+      <div className="space-y-6">
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-gray-900">Loans</h1>
@@ -160,25 +163,22 @@ export default function Loans() {
         <div className="flex flex-col md:flex-row gap-4">
           {/* Search */}
           <div className="flex-1">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-              <input
-                type="text"
-                placeholder="Search by Loan ID, Customer ID, or Order ID..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
+            <Input
+              type="text"
+              placeholder="Search by Loan ID, Customer ID, or Order ID..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              icon={<Search className="w-5 h-5" />}
+            />
           </div>
 
           {/* Status Filter */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 min-w-[200px]">
             <Filter className="w-5 h-5 text-gray-400" />
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:ring-opacity-20 focus:border-blue-500 focus:outline-none transition-colors text-sm bg-white"
             >
               <option value="all">All Status</option>
               <option value="pending">Pending</option>
@@ -305,6 +305,7 @@ export default function Loans() {
           </table>
         </div>
       </div>
-    </div>
+      </div>
+    </DashboardLayout>
   );
 }

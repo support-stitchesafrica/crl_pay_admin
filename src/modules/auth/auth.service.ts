@@ -17,11 +17,13 @@ interface OTPRecord {
 }
 
 export interface JwtPayload {
-  sub: string; // merchantId or adminId
+  sub: string; // merchantId, adminId, or financierId
   email: string;
-  role: 'merchant' | 'admin';
+  role?: 'merchant' | 'admin' | 'financier';
+  type?: 'merchant' | 'admin' | 'financier'; // Support both 'role' and 'type' for backwards compatibility
   businessName?: string; // for merchants
   name?: string; // for admins
+  companyName?: string; // for financiers
 }
 
 @Injectable()
@@ -172,13 +174,25 @@ export class AuthService {
   }
 
   async validateToken(payload: JwtPayload) {
-    if (payload.role === 'merchant') {
-      const merchant = await this.merchantsService.findOne(payload.sub);
-      if (!merchant || merchant.status !== 'approved') {
+    // Support both 'role' and 'type' for backwards compatibility
+    const userType = payload.role || payload.type;
+    this.logger.log(`Validating token for ${userType}: ${payload.email}`);
+
+    if (userType === 'merchant') {
+      try {
+        const merchant = await this.merchantsService.findOne(payload.sub);
+        this.logger.log(`Merchant found: ${merchant?.businessName}, status: ${merchant?.status}`);
+
+        if (!merchant || merchant.status !== 'approved') {
+          this.logger.warn(`Token validation failed: merchant not found or not approved`);
+          return null;
+        }
+        return { ...payload, merchantId: payload.sub };
+      } catch (error) {
+        this.logger.error(`Error validating merchant token: ${error.message}`);
         return null;
       }
-      return { ...payload, merchantId: payload.sub };
-    } else if (payload.role === 'admin') {
+    } else if (userType === 'admin') {
       const adminSnapshot = await this.adminsCollection.doc(payload.sub).get();
       if (!adminSnapshot.exists) {
         return null;
@@ -188,6 +202,31 @@ export class AuthService {
         return null;
       }
       return { ...payload, adminId: payload.sub };
+    } else if (userType === 'financier') {
+      try {
+        const financierDoc = await this.firestore
+          .collection('crl_financiers')
+          .doc(payload.sub)
+          .get();
+
+        if (!financierDoc.exists) {
+          this.logger.warn(`Token validation failed: financier not found`);
+          return null;
+        }
+
+        const financier = financierDoc.data();
+        this.logger.log(`Financier found: ${financier?.companyName}, status: ${financier?.status}`);
+
+        if (financier?.status !== 'approved') {
+          this.logger.warn(`Token validation failed: financier not approved`);
+          return null;
+        }
+
+        return { ...payload, financierId: payload.sub };
+      } catch (error) {
+        this.logger.error(`Error validating financier token: ${error.message}`);
+        return null;
+      }
     }
     return null;
   }

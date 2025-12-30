@@ -136,32 +136,36 @@ SMS_API_KEY=your-sms-api-key
 
 ### Overview
 
-The CRL Pay system consists of **four distinct applications** within a monorepo structure:
+The CRL Pay system consists of **five distinct applications** within a monorepo structure:
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                     CRL PAY BNPL SYSTEM                         │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐         │
-│  │   BACKEND    │  │    ADMIN     │  │   MERCHANT   │         │
-│  │     API      │  │  DASHBOARD   │  │  DASHBOARD   │         │
-│  │  (NestJS)    │  │  (React SPA) │  │  (React SPA) │         │
-│  └──────────────┘  └──────────────┘  └──────────────┘         │
-│         │                  │                  │                │
-│         └──────────────────┴──────────────────┘                │
-│                            │                                   │
-│                   ┌────────▼─────────┐                         │
-│                   │  CUSTOMER        │                         │
-│                   │  WEBVIEW         │                         │
-│                   │  (Next.js)       │                         │
-│                   └──────────────────┘                         │
-│                            │                                   │
-│                   ┌────────▼─────────┐                         │
-│                   │   FIREBASE       │                         │
-│                   │   FIRESTORE      │                         │
-│                   └──────────────────┘                         │
-└─────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────┐
+│                        CRL PAY BNPL SYSTEM                           │
+├──────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐             │
+│  │   BACKEND    │  │  CRL ADMIN   │  │   MERCHANT   │             │
+│  │     API      │  │  DASHBOARD   │  │  DASHBOARD   │             │
+│  │  (NestJS)    │  │  (React SPA) │  │  (React SPA) │             │
+│  └──────────────┘  └──────────────┘  └──────────────┘             │
+│         │                  │                  │                    │
+│         └──────────────────┴──────────────────┘                    │
+│                            │                                       │
+│         ┌──────────────────┴──────────────────┐                   │
+│         │                                     │                   │
+│  ┌──────▼────────┐                   ┌────────▼────────┐          │
+│  │  FINANCIER    │                   │   CUSTOMER      │          │
+│  │  DASHBOARD    │                   │   WEBVIEW       │          │
+│  │  (React SPA)  │                   │   (Next.js)     │          │
+│  └───────────────┘                   └─────────────────┘          │
+│         │                                     │                   │
+│         └──────────────────┬──────────────────┘                   │
+│                            │                                       │
+│                   ┌────────▼─────────┐                             │
+│                   │   FIREBASE       │                             │
+│                   │   FIRESTORE      │                             │
+│                   └──────────────────┘                             │
+└──────────────────────────────────────────────────────────────────────┘
 ```
 
 ### Application Components
@@ -173,18 +177,21 @@ The CRL Pay system consists of **four distinct applications** within a monorepo 
 - **Location**: `src/`
 - **Port**: 3006
 
-#### 2. Admin Dashboard (React SPA)
-- **Purpose**: Internal admin panel for managing merchants and system
+#### 2. CRL Pay Admin Dashboard (React SPA)
+- **Purpose**: Internal admin panel for managing merchants, financiers, and system
 - **Technology**: React, TypeScript, Vite, TailwindCSS
 - **Users**: CRL Pay administrators
 - **Location**: `apps/admin-dashboard/`
 - **Port**: 3007
 - **Key Features**:
-  - Merchant approval workflow
-  - System-wide analytics
-  - Default management
-  - Customer support tools
-  - Settings and configuration
+  - **Merchant Management**: Approval workflow, suspension, analytics
+  - **Financier Management**: Approval workflow, fund tracking, performance
+  - **Plan-Merchant Mapping**: Map financing plans to approved merchants
+  - **Fund Approval**: Approve fund allocations when financier deposits capital
+  - **System-wide Analytics**: Cross-platform metrics, revenue tracking
+  - **Default Management**: Monitor and manage all defaults
+  - **Customer Support Tools**: Support tickets, dispute resolution
+  - **Settings and Configuration**: System-wide settings
 
 #### 3. Merchant Dashboard (React SPA)
 - **Purpose**: Merchant portal for monitoring transactions and customers
@@ -193,18 +200,49 @@ The CRL Pay system consists of **four distinct applications** within a monorepo 
 - **Location**: `apps/merchant-dashboard/`
 - **Port**: 3008
 - **Key Features**:
-  - Transaction monitoring
-  - Customer analytics
-  - Settlement tracking
-  - API key management
-  - Webhook configuration
+  - **View Customers & Loans**: See all customers and their loan performance (read-only)
+  - **View Mapped Plans**: See financing plans mapped to them by admin
+  - **Plan Usage Tracking**: Monitor available funds and usage for each plan
+  - **Transaction Monitoring**: Track loan disbursements and repayments
+  - **Customer Analytics**: Customer credit scores, payment patterns
+  - **Settlement Tracking**: Monitor merchant payouts
+  - **API Key Management**: Manage API keys for integration
+  - **Webhook Configuration**: Setup webhook endpoints
 
-#### 4. Customer Webview (Next.js)
+#### 4. Financier Dashboard (React SPA)
+- **Purpose**: Financier portal for managing financing plans and monitoring performance
+- **Technology**: React, TypeScript, Vite, TailwindCSS
+- **Users**: Registered financiers (banks, microfinance institutions, investment firms)
+- **Location**: `apps/financier-dashboard/`
+- **Port**: 3009
+- **Key Features**:
+  - **Signup & Approval**: Register as financier, await admin approval
+  - **Financing Plan Setup**: Create and manage multiple loan products
+    - Configure interest rates, duration, installments
+    - Set min/max loan amounts
+    - Define grace periods and late fees
+  - **Eligibility Rules Configuration**: Set advanced criteria
+    - Minimum credit score requirements
+    - Income verification thresholds
+    - Debt-to-income ratio limits
+    - Email domain whitelisting (for corporate staff financing)
+    - Product category filtering
+  - **Loan Requests Monitoring**: View all loan applications using their plans
+  - **Repayment Schedules**: Track payment schedules and statuses
+  - **Analytics & Reporting**:
+    - Total funds deployed vs. available
+    - Active loans and repayment rates
+    - Default rates and collections
+    - Revenue from interest and fees
+    - Plan-wise performance comparison
+  - **Fund Management**: Track fund allocation across plans and merchants
+
+#### 5. Customer Webview (Next.js)
 - **Purpose**: Customer-facing checkout flow
 - **Technology**: Next.js, React, TypeScript
 - **Users**: End customers making purchases
 - **Location**: `apps/customer-webview/`
-- **Port**: 3009
+- **Port**: 3010
 - **Integration**: Embedded via iframe/popup on merchant websites
 
 ### Why This Architecture?
@@ -217,8 +255,9 @@ The CRL Pay system consists of **four distinct applications** within a monorepo 
 ✅ **Consistent Tooling**: Same linters, formatters, testing setup
 
 #### Separation of Concerns:
-✅ **Admin Dashboard (React SPA)**: Full-featured admin panel with complex state management
-✅ **Merchant Dashboard (React SPA)**: Rich merchant portal with real-time analytics
+✅ **CRL Pay Admin Dashboard (React SPA)**: Full-featured admin panel for system management
+✅ **Merchant Dashboard (React SPA)**: Rich merchant portal with read-only customer/loan views
+✅ **Financier Dashboard (React SPA)**: Comprehensive financier portal for plan management
 ✅ **Customer Webview (Next.js)**: SEO-friendly, fast checkout with server-side rendering
 ✅ **Backend API (NestJS)**: Business logic separated from presentation
 
@@ -240,12 +279,16 @@ crl-pay/
 │   └── main.ts
 │
 ├── apps/                             # Frontend Applications
-│   ├── admin-dashboard/             # Admin React App
+│   ├── admin-dashboard/             # CRL Pay Admin React App
 │   │   ├── src/
 │   │   │   ├── pages/
 │   │   │   │   ├── Dashboard.tsx
 │   │   │   │   ├── MerchantApproval.tsx
 │   │   │   │   ├── MerchantManagement.tsx
+│   │   │   │   ├── FinancierApproval.tsx
+│   │   │   │   ├── FinancierManagement.tsx
+│   │   │   │   ├── PlanMerchantMapping.tsx
+│   │   │   │   ├── FundApproval.tsx
 │   │   │   │   ├── DefaultManagement.tsx
 │   │   │   │   ├── SystemAnalytics.tsx
 │   │   │   │   └── Settings.tsx
@@ -262,11 +305,32 @@ crl-pay/
 │   │   ├── src/
 │   │   │   ├── pages/
 │   │   │   │   ├── Overview.tsx
-│   │   │   │   ├── Transactions.tsx
-│   │   │   │   ├── Customers.tsx
+│   │   │   │   ├── Customers.tsx          // Read-only customer view
+│   │   │   │   ├── Loans.tsx              // Read-only loan view
+│   │   │   │   ├── MappedPlans.tsx        // View plans mapped to merchant
 │   │   │   │   ├── Analytics.tsx
 │   │   │   │   ├── Settlements.tsx
 │   │   │   │   └── Settings.tsx
+│   │   │   ├── components/
+│   │   │   ├── hooks/
+│   │   │   ├── services/api.ts
+│   │   │   ├── App.tsx
+│   │   │   └── main.tsx
+│   │   ├── package.json
+│   │   ├── vite.config.ts
+│   │   └── index.html
+│   │
+│   ├── financier-dashboard/         # Financier React App
+│   │   ├── src/
+│   │   │   ├── pages/
+│   │   │   │   ├── Dashboard.tsx           // Overview & KPIs
+│   │   │   │   ├── Plans.tsx               // Manage financing plans
+│   │   │   │   ├── EligibilityRules.tsx    // Configure eligibility criteria
+│   │   │   │   ├── LoanRequests.tsx        // View loan applications
+│   │   │   │   ├── RepaymentSchedules.tsx  // Track repayments
+│   │   │   │   ├── Analytics.tsx           // Performance analytics
+│   │   │   │   ├── Notifications.tsx       // Alerts & notifications
+│   │   │   │   └── Settings.tsx            // Financier settings
 │   │   │   ├── components/
 │   │   │   ├── hooks/
 │   │   │   ├── services/api.ts
@@ -311,14 +375,16 @@ crl-pay/
     "shared/*"
   ],
   "scripts": {
-    "dev": "concurrently \"npm run dev:api\" \"npm run dev:admin\" \"npm run dev:merchant\" \"npm run dev:webview\"",
+    "dev": "concurrently \"npm run dev:api\" \"npm run dev:admin\" \"npm run dev:merchant\" \"npm run dev:financier\" \"npm run dev:webview\"",
     "dev:api": "npm run start:dev",
     "dev:admin": "npm run dev --workspace=apps/admin-dashboard",
     "dev:merchant": "npm run dev --workspace=apps/merchant-dashboard",
+    "dev:financier": "npm run dev --workspace=apps/financier-dashboard",
     "dev:webview": "npm run dev --workspace=apps/customer-webview",
-    "build:all": "npm run build && npm run build:admin && npm run build:merchant && npm run build:webview",
+    "build:all": "npm run build && npm run build:admin && npm run build:merchant && npm run build:financier && npm run build:webview",
     "build:admin": "npm run build --workspace=apps/admin-dashboard",
     "build:merchant": "npm run build --workspace=apps/merchant-dashboard",
+    "build:financier": "npm run build --workspace=apps/financier-dashboard",
     "build:webview": "npm run build --workspace=apps/customer-webview"
   },
   "devDependencies": {
@@ -349,17 +415,58 @@ crl-pay/
 ### Data Access Patterns
 
 ```typescript
-// Admin can access ALL merchants
-GET /api/v1/admin/merchants          // List all merchants
-GET /api/v1/admin/merchants/:id      // Get specific merchant
-PUT /api/v1/admin/merchants/:id/approve
-GET /api/v1/admin/defaults           // All defaults across system
+// ============== ADMIN (Full System Access) ==============
+// Merchants
+GET /api/v1/admin/merchants                    // List all merchants
+GET /api/v1/admin/merchants/:id                // Get specific merchant
+PUT /api/v1/admin/merchants/:id/approve        // Approve/reject merchant
+PUT /api/v1/admin/merchants/:id/suspend        // Suspend merchant
 
-// Merchant can ONLY access their own data
-GET /api/v1/merchants/me             // Own profile
-GET /api/v1/merchants/me/transactions // Own transactions
-GET /api/v1/merchants/me/customers    // Own customers
-GET /api/v1/merchants/me/analytics    // Own analytics
+// Financiers
+GET /api/v1/admin/financiers                   // List all financiers
+GET /api/v1/admin/financiers/:id               // Get specific financier
+PUT /api/v1/admin/financiers/:id/approve       // Approve/reject financier
+PUT /api/v1/admin/financiers/:id/funds/approve // Approve fund allocation
+
+// Plan-Merchant Mappings
+GET /api/v1/admin/plan-mappings                // List all mappings
+POST /api/v1/admin/plan-mappings               // Create new mapping
+PUT /api/v1/admin/plan-mappings/:id/approve    // Approve mapping
+DELETE /api/v1/admin/plan-mappings/:id         // Remove mapping
+
+// System-wide
+GET /api/v1/admin/defaults                     // All defaults across system
+GET /api/v1/admin/analytics                    // Cross-platform analytics
+GET /api/v1/admin/loans                        // All loans (merchant + financier funded)
+
+// ============== MERCHANT (Own Data Only) ==============
+GET /api/v1/merchants/me                       // Own profile
+GET /api/v1/merchants/me/customers             // Own customers (read-only)
+GET /api/v1/merchants/me/loans                 // Own loans (read-only)
+GET /api/v1/merchants/me/mapped-plans          // Plans mapped to this merchant
+GET /api/v1/merchants/me/plan-usage/:planId    // Usage stats for specific plan
+GET /api/v1/merchants/me/analytics             // Own analytics
+GET /api/v1/merchants/me/transactions          // Own transactions
+GET /api/v1/merchants/me/settlements           // Own settlements
+
+// ============== FINANCIER (Own Data Only) ==============
+GET /api/v1/financiers/me                      // Own profile
+GET /api/v1/financiers/me/plans                // Own financing plans
+POST /api/v1/financiers/me/plans               // Create new plan
+PUT /api/v1/financiers/me/plans/:id            // Update plan
+DELETE /api/v1/financiers/me/plans/:id         // Deactivate plan
+GET /api/v1/financiers/me/loans                // Loans using financier's plans
+GET /api/v1/financiers/me/loan-requests        // Pending loan applications
+GET /api/v1/financiers/me/repayment-schedules  // All repayment schedules
+GET /api/v1/financiers/me/analytics            // Financier performance analytics
+GET /api/v1/financiers/me/fund-allocation      // Fund allocation across plans
+
+// ============== CUSTOMER (Public/No Auth) ==============
+POST /api/v1/customers/onboard                 // Customer onboarding
+POST /api/v1/credit/assess                     // Credit assessment
+POST /api/v1/loans/create                      // Create loan
+POST /api/v1/payments/authorize-card           // Authorize card
+GET /api/v1/loans/:id                          // Get loan details (with token)
 ```
 
 ---
@@ -2372,6 +2479,725 @@ export default function Analytics() {
             <Area type="monotone" dataKey="revenue" stroke="#8884d8" fill="#8884d8" />
           </AreaChart>
         </ResponsiveContainer>
+      </div>
+    </div>
+  );
+}
+```
+
+---
+
+## Financier Dashboard Implementation
+
+### Overview
+
+The Financier Dashboard enables financial institutions to:
+1. Register and get approved by CRL Pay Admin
+2. Create and manage financing plans with custom terms
+3. Configure eligibility rules for borrowers
+4. Monitor loan requests and repayment performance
+5. Track fund allocation and analytics
+
+### Backend Implementation
+
+#### Financier Module Setup
+
+```bash
+nest g module modules/financiers
+nest g controller modules/financiers
+nest g service modules/financiers
+```
+
+**Files to create:**
+- `src/modules/financiers/dto/register-financier.dto.ts`
+- `src/modules/financiers/dto/login-financier.dto.ts`
+- `src/modules/financiers/dto/create-plan.dto.ts`
+- `src/modules/financiers/dto/update-eligibility.dto.ts`
+- `src/modules/financiers/financiers.service.ts`
+- `src/modules/financiers/financiers.controller.ts`
+- `src/modules/financiers/plans.service.ts`
+- `src/modules/financiers/plans.controller.ts`
+
+#### DTOs
+
+**Register Financier DTO:**
+```typescript
+// src/modules/financiers/dto/register-financier.dto.ts
+import { IsEmail, IsString, MinLength, IsNotEmpty } from 'class-validator';
+import { ApiProperty } from '@nestjs/swagger';
+
+export class RegisterFinancierDto {
+  @ApiProperty({ example: 'ABC Microfinance Bank' })
+  @IsString()
+  @IsNotEmpty()
+  companyName: string;
+
+  @ApiProperty({ example: 'finance@abcbank.com' })
+  @IsEmail()
+  email: string;
+
+  @ApiProperty({ example: '+2348012345678' })
+  @IsString()
+  phone: string;
+
+  @ApiProperty({ example: 'SecurePassword123!' })
+  @IsString()
+  @MinLength(8)
+  password: string;
+
+  @ApiProperty({ example: '123 Finance Street, Lagos' })
+  @IsString()
+  businessAddress: string;
+
+  @ApiProperty({ example: 'Microfinance' })
+  @IsString()
+  businessCategory: string;
+
+  @ApiProperty({ example: 'RC123456' })
+  @IsString()
+  registrationNumber: string;
+
+  @ApiProperty({ example: 'TAX123456' })
+  @IsString()
+  taxId: string;
+}
+```
+
+**Create Financing Plan DTO:**
+```typescript
+// src/modules/financiers/dto/create-plan.dto.ts
+import { IsString, IsNumber, IsBoolean, IsArray, IsOptional, Min, Max, ValidateNested } from 'class-validator';
+import { Type } from 'class-transformer';
+import { ApiProperty } from '@nestjs/swagger';
+
+class LateFeeDto {
+  @ApiProperty({ example: 'fixed', enum: ['fixed', 'percentage'] })
+  type: 'fixed' | 'percentage';
+
+  @ApiProperty({ example: 5 })
+  @IsNumber()
+  amount: number;
+}
+
+class EligibilityCriteriaDto {
+  @ApiProperty({ example: 600, required: false })
+  @IsOptional()
+  @IsNumber()
+  minCreditScore?: number;
+
+  @ApiProperty({ example: 50000, required: false })
+  @IsOptional()
+  @IsNumber()
+  minMonthlyIncome?: number;
+
+  @ApiProperty({ example: 0.4, required: false })
+  @IsOptional()
+  @IsNumber()
+  maxDebtToIncome?: number;
+
+  @ApiProperty({ example: 6, required: false })
+  @IsOptional()
+  @IsNumber()
+  minEmploymentMonths?: number;
+
+  @ApiProperty({ example: ['@company.com'], required: false, type: [String] })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  allowedEmailDomains?: string[];
+
+  @ApiProperty({ example: ['Electronics', 'Fashion'], required: false, type: [String] })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  allowedCategories?: string[];
+}
+
+export class CreateFinancingPlanDto {
+  @ApiProperty({ example: '6-Month Standard Plan' })
+  @IsString()
+  name: string;
+
+  @ApiProperty({ example: 'Standard 6-month financing with competitive rates', required: false })
+  @IsOptional()
+  @IsString()
+  description?: string;
+
+  @ApiProperty({ example: 6 })
+  @IsNumber()
+  @Min(1)
+  @Max(24)
+  duration: number; // months
+
+  @ApiProperty({ example: 6 })
+  @IsNumber()
+  @Min(1)
+  installments: number;
+
+  @ApiProperty({ example: 5 })
+  @IsNumber()
+  @Min(0)
+  @Max(50)
+  interestRate: number; // percentage
+
+  @ApiProperty({ example: 10000 })
+  @IsNumber()
+  @Min(1000)
+  minAmount: number;
+
+  @ApiProperty({ example: 500000 })
+  @IsNumber()
+  maxAmount: number;
+
+  @ApiProperty({ example: 3 })
+  @IsNumber()
+  @Min(0)
+  gracePeriod: number; // days
+
+  @ApiProperty({ type: LateFeeDto })
+  @ValidateNested()
+  @Type(() => LateFeeDto)
+  lateFee: LateFeeDto;
+
+  @ApiProperty({ example: true })
+  @IsBoolean()
+  allowEarlyRepayment: boolean;
+
+  @ApiProperty({ type: EligibilityCriteriaDto, required: false })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => EligibilityCriteriaDto)
+  eligibilityCriteria?: EligibilityCriteriaDto;
+}
+```
+
+#### Financier Service
+
+```typescript
+// src/modules/financiers/financiers.service.ts
+import { Injectable, BadRequestException, UnauthorizedException } from '@nestjs/common';
+import { FirebaseService } from '@/config/firebase.config';
+import { RegisterFinancierDto } from './dto/register-financier.dto';
+import * as bcrypt from 'bcryptjs';
+import { JwtService } from '@nestjs/jwt';
+
+@Injectable()
+export class FinanciersService {
+  constructor(
+    private firebaseService: FirebaseService,
+    private jwtService: JwtService,
+  ) {}
+
+  async register(dto: RegisterFinancierDto) {
+    const db = this.firebaseService.getFirestore();
+
+    // Check if email already exists
+    const existingFinancier = await db.collection('crl_financiers')
+      .where('email', '==', dto.email)
+      .limit(1)
+      .get();
+
+    if (!existingFinancier.empty) {
+      throw new BadRequestException('Email already registered');
+    }
+
+    // Hash password
+    const passwordHash = await bcrypt.hash(dto.password, 10);
+
+    // Create financier document
+    const financierRef = db.collection('crl_financiers').doc();
+    const financier = {
+      financierId: financierRef.id,
+      companyName: dto.companyName,
+      email: dto.email,
+      phone: dto.phone,
+      passwordHash,
+      status: 'pending',
+      businessAddress: dto.businessAddress,
+      businessCategory: dto.businessCategory,
+      registrationNumber: dto.registrationNumber,
+      taxId: dto.taxId,
+      availableFunds: 0,
+      allocatedFunds: 0,
+      totalDisbursed: 0,
+      totalRepaid: 0,
+      createdAt: admin.firestore.Timestamp.now(),
+      updatedAt: admin.firestore.Timestamp.now(),
+    };
+
+    await financierRef.set(financier);
+
+    // TODO: Send notification to admin for approval
+    // TODO: Send welcome email to financier
+
+    return {
+      message: 'Registration successful. Awaiting admin approval.',
+      financierId: financier.financierId,
+    };
+  }
+
+  async login(email: string, password: string) {
+    const db = this.firebaseService.getFirestore();
+
+    const snapshot = await db.collection('crl_financiers')
+      .where('email', '==', email)
+      .limit(1)
+      .get();
+
+    if (snapshot.empty) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
+    const financier = snapshot.docs[0].data();
+
+    // Verify password
+    const isPasswordValid = await bcrypt.compare(password, financier.passwordHash);
+    if (!isPasswordValid) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
+    // Check if approved
+    if (financier.status !== 'approved') {
+      throw new UnauthorizedException('Account pending approval');
+    }
+
+    // Generate JWT token
+    const payload = {
+      sub: financier.financierId,
+      email: financier.email,
+      type: 'financier',
+    };
+
+    const access_token = await this.jwtService.signAsync(payload);
+
+    // Update last login
+    await db.collection('crl_financiers').doc(financier.financierId).update({
+      lastLoginAt: admin.firestore.Timestamp.now(),
+    });
+
+    return {
+      access_token,
+      user: {
+        financierId: financier.financierId,
+        companyName: financier.companyName,
+        email: financier.email,
+        status: financier.status,
+      },
+    };
+  }
+
+  async getProfile(financierId: string) {
+    const db = this.firebaseService.getFirestore();
+    const doc = await db.collection('crl_financiers').doc(financierId).get();
+
+    if (!doc.exists) {
+      throw new BadRequestException('Financier not found');
+    }
+
+    const data = doc.data();
+    delete data.passwordHash; // Don't return password hash
+
+    return data;
+  }
+}
+```
+
+#### Plans Service
+
+```typescript
+// src/modules/financiers/plans.service.ts
+import { Injectable, BadRequestException } from '@nestjs/common';
+import { FirebaseService } from '@/config/firebase.config';
+import { CreateFinancingPlanDto } from './dto/create-plan.dto';
+
+@Injectable()
+export class PlansService {
+  constructor(private firebaseService: FirebaseService) {}
+
+  async createPlan(financierId: string, dto: CreateFinancingPlanDto) {
+    const db = this.firebaseService.getFirestore();
+
+    // Validate min < max amount
+    if (dto.minAmount >= dto.maxAmount) {
+      throw new BadRequestException('Min amount must be less than max amount');
+    }
+
+    // Create plan document
+    const planRef = db.collection('crl_financing_plans').doc();
+    const plan = {
+      planId: planRef.id,
+      financierId,
+      name: dto.name,
+      description: dto.description || '',
+      duration: dto.duration,
+      installments: dto.installments,
+      interestRate: dto.interestRate,
+      minAmount: dto.minAmount,
+      maxAmount: dto.maxAmount,
+      gracePeriod: dto.gracePeriod,
+      lateFee: dto.lateFee,
+      allowEarlyRepayment: dto.allowEarlyRepayment,
+      eligibilityCriteria: dto.eligibilityCriteria || {},
+      status: 'active',
+      totalFundsAllocated: 0,
+      totalLoansCreated: 0,
+      createdAt: admin.firestore.Timestamp.now(),
+      updatedAt: admin.firestore.Timestamp.now(),
+    };
+
+    await planRef.set(plan);
+
+    return {
+      message: 'Financing plan created successfully',
+      plan,
+    };
+  }
+
+  async getPlans(financierId: string) {
+    const db = this.firebaseService.getFirestore();
+
+    const snapshot = await db.collection('crl_financing_plans')
+      .where('financierId', '==', financierId)
+      .orderBy('createdAt', 'desc')
+      .get();
+
+    return snapshot.docs.map(doc => doc.data());
+  }
+
+  async updatePlan(financierId: string, planId: string, updates: Partial<CreateFinancingPlanDto>) {
+    const db = this.firebaseService.getFirestore();
+
+    // Verify ownership
+    const planDoc = await db.collection('crl_financing_plans').doc(planId).get();
+    if (!planDoc.exists) {
+      throw new BadRequestException('Plan not found');
+    }
+
+    const plan = planDoc.data();
+    if (plan.financierId !== financierId) {
+      throw new BadRequestException('Unauthorized');
+    }
+
+    await db.collection('crl_financing_plans').doc(planId).update({
+      ...updates,
+      updatedAt: admin.firestore.Timestamp.now(),
+    });
+
+    return {
+      message: 'Plan updated successfully',
+    };
+  }
+
+  async deactivatePlan(financierId: string, planId: string) {
+    const db = this.firebaseService.getFirestore();
+
+    // Verify ownership
+    const planDoc = await db.collection('crl_financing_plans').doc(planId).get();
+    if (!planDoc.exists) {
+      throw new BadRequestException('Plan not found');
+    }
+
+    const plan = planDoc.data();
+    if (plan.financierId !== financierId) {
+      throw new BadRequestException('Unauthorized');
+    }
+
+    await db.collection('crl_financing_plans').doc(planId).update({
+      status: 'inactive',
+      deactivatedAt: admin.firestore.Timestamp.now(),
+      updatedAt: admin.firestore.Timestamp.now(),
+    });
+
+    return {
+      message: 'Plan deactivated successfully',
+    };
+  }
+
+  async getLoans(financierId: string) {
+    const db = this.firebaseService.getFirestore();
+
+    const snapshot = await db.collection('crl_loans')
+      .where('financierId', '==', financierId)
+      .where('fundingSource', '==', 'financier')
+      .orderBy('createdAt', 'desc')
+      .get();
+
+    return snapshot.docs.map(doc => doc.data());
+  }
+
+  async getAnalytics(financierId: string) {
+    const db = this.firebaseService.getFirestore();
+
+    // Get all loans for this financier
+    const loansSnapshot = await db.collection('crl_loans')
+      .where('financierId', '==', financierId)
+      .get();
+
+    const loans = loansSnapshot.docs.map(doc => doc.data());
+
+    // Calculate metrics
+    const totalLoans = loans.length;
+    const activeLoans = loans.filter(l => l.status === 'active').length;
+    const completedLoans = loans.filter(l => l.status === 'completed').length;
+    const defaultedLoans = loans.filter(l => l.status === 'defaulted').length;
+
+    const totalDisbursed = loans.reduce((sum, l) => sum + l.principalAmount, 0);
+    const totalRepaid = loans.reduce((sum, l) => sum + l.amountPaid, 0);
+    const outstandingAmount = loans
+      .filter(l => l.status === 'active')
+      .reduce((sum, l) => sum + l.amountRemaining, 0);
+
+    // Get financier profile for fund info
+    const financierDoc = await db.collection('crl_financiers').doc(financierId).get();
+    const financier = financierDoc.data();
+
+    return {
+      overview: {
+        totalLoans,
+        activeLoans,
+        completedLoans,
+        defaultedLoans,
+        defaultRate: totalLoans > 0 ? (defaultedLoans / totalLoans) * 100 : 0,
+        repaymentRate: totalDisbursed > 0 ? (totalRepaid / totalDisbursed) * 100 : 0,
+      },
+      financials: {
+        availableFunds: financier.availableFunds || 0,
+        allocatedFunds: financier.allocatedFunds || 0,
+        totalDisbursed,
+        totalRepaid,
+        outstandingAmount,
+        totalRevenue: totalRepaid - totalDisbursed, // Interest + fees
+      },
+    };
+  }
+}
+```
+
+### Financier Dashboard Frontend
+
+#### App Structure
+
+```typescript
+// apps/financier-dashboard/src/App.tsx
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { AuthProvider } from './contexts/AuthContext';
+import { PrivateRoute } from './components/PrivateRoute';
+
+import Login from './pages/Login';
+import Register from './pages/Register';
+import Dashboard from './pages/Dashboard';
+import Plans from './pages/Plans';
+import EligibilityRules from './pages/EligibilityRules';
+import LoanRequests from './pages/LoanRequests';
+import RepaymentSchedules from './pages/RepaymentSchedules';
+import Analytics from './pages/Analytics';
+import Settings from './pages/Settings';
+
+const queryClient = new QueryClient();
+
+function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            <Route
+              path="/"
+              element={
+                <PrivateRoute>
+                  <Dashboard />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/plans"
+              element={
+                <PrivateRoute>
+                  <Plans />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/eligibility"
+              element={
+                <PrivateRoute>
+                  <EligibilityRules />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/loan-requests"
+              element={
+                <PrivateRoute>
+                  <LoanRequests />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/repayments"
+              element={
+                <PrivateRoute>
+                  <RepaymentSchedules />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/analytics"
+              element={
+                <PrivateRoute>
+                  <Analytics />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/settings"
+              element={
+                <PrivateRoute>
+                  <Settings />
+                </PrivateRoute>
+              }
+            />
+          </Routes>
+        </BrowserRouter>
+      </AuthProvider>
+    </QueryClientProvider>
+  );
+}
+
+export default App;
+```
+
+#### Key Pages
+
+**Plans Management Page** (see reference at `/Users/oluwaseunodeyemi/Sides/SA/stitchesafricamobile.dashboard/app/financier/(dashboard)/dashboard/plans/page.tsx`)
+- Create new financing plans
+- Edit existing plans
+- Deactivate plans
+- View plan performance metrics
+
+**Eligibility Rules Page** (see reference at `/Users/oluwaseunodeyemi/Sides/SA/stitchesafricamobile.dashboard/app/financier/(dashboard)/dashboard/eligibility/page.tsx`)
+- Configure credit score requirements
+- Set income verification thresholds
+- Define email domain whitelist (for corporate staff)
+- Specify allowed product categories
+
+**Analytics Dashboard**
+- Fund utilization charts
+- Repayment performance
+- Plan-wise comparison
+- Revenue tracking
+
+### Admin Dashboard Updates
+
+#### Plan-Merchant Mapping Page
+
+**New Admin Page: `apps/admin-dashboard/src/pages/PlanMerchantMapping.tsx`**
+
+```typescript
+import { useState, useEffect } from 'react';
+import { toast } from 'sonner';
+
+export default function PlanMerchantMapping() {
+  const [financiers, setFinanciers] = useState([]);
+  const [merchants, setMerchants] = useState([]);
+  const [selectedFinancier, setSelectedFinancier] = useState('');
+  const [selectedPlan, setSelectedPlan] = useState('');
+  const [selectedMerchant, setSelectedMerchant] = useState('');
+  const [allocatedFunds, setAllocatedFunds] = useState(0);
+
+  const handleCreateMapping = async () => {
+    try {
+      const response = await fetch('/api/v1/admin/plan-mappings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          planId: selectedPlan,
+          merchantId: selectedMerchant,
+          financierId: selectedFinancier,
+          availableFunds: allocatedFunds,
+        }),
+      });
+
+      if (response.ok) {
+        toast.success('Plan mapped to merchant successfully');
+        // Reset form and reload
+      } else {
+        toast.error('Failed to create mapping');
+      }
+    } catch (error) {
+      toast.error('Error creating mapping');
+    }
+  };
+
+  // ... rest of implementation
+}
+```
+
+#### Fund Approval Page
+
+**New Admin Page: `apps/admin-dashboard/src/pages/FundApproval.tsx`**
+
+Allows admin to:
+1. View financier fund deposit requests
+2. Verify bank transfer/proof of funds
+3. Approve and allocate funds to financier account
+
+### Merchant Dashboard Updates
+
+#### Mapped Plans Page
+
+**New Merchant Page: `apps/merchant-dashboard/src/pages/MappedPlans.tsx`**
+
+```typescript
+import { useState, useEffect } from 'react';
+
+export default function MappedPlans() {
+  const [mappedPlans, setMappedPlans] = useState([]);
+
+  useEffect(() => {
+    fetchMappedPlans();
+  }, []);
+
+  const fetchMappedPlans = async () => {
+    const response = await fetch('/api/v1/merchants/me/mapped-plans');
+    const data = await response.json();
+    setMappedPlans(data);
+  };
+
+  return (
+    <div>
+      <h1>Financing Plans Available to You</h1>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {mappedPlans.map(mapping => (
+          <div key={mapping.mappingId} className="border rounded-lg p-6">
+            <h3>{mapping.plan.name}</h3>
+            <p>Financier: {mapping.financier.companyName}</p>
+            <p>Interest Rate: {mapping.plan.interestRate}%</p>
+            <p>Duration: {mapping.plan.duration} months</p>
+
+            <div className="mt-4">
+              <h4>Fund Availability</h4>
+              <p>Available: ₦{mapping.availableFunds.toLocaleString()}</p>
+              <p>Allocated: ₦{mapping.allocatedFunds.toLocaleString()}</p>
+              <div className="w-full bg-gray-200 rounded-full h-2.5">
+                <div
+                  className="bg-blue-600 h-2.5 rounded-full"
+                  style={{ width: `${(mapping.allocatedFunds / (mapping.availableFunds + mapping.allocatedFunds)) * 100}%` }}
+                ></div>
+              </div>
+            </div>
+
+            <div className="mt-4">
+              <h4>Performance</h4>
+              <p>Total Loans: {mapping.performanceMetrics.totalLoans}</p>
+              <p>Active Loans: {mapping.performanceMetrics.activeLoans}</p>
+              <p>Default Rate: {mapping.performanceMetrics.defaultRate}%</p>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
