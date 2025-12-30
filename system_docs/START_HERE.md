@@ -30,11 +30,15 @@ Open these URLs in your browser:
    - Login: Use any email + any password
    - Monitor transactions, view revenue
 
-3. **Customer Webview**: http://localhost:3009
+3. **Financier Dashboard**: http://localhost:3009
+   - Login: Use any email + any password
+   - Create financing plans, monitor loans
+
+4. **Customer Webview**: http://localhost:3010
    - No login needed
    - See the customer checkout experience
 
-4. **API Documentation**: http://localhost:3006/api/v1/swagger-ui
+5. **API Documentation**: http://localhost:3006/api/v1/swagger-ui
    - Explore all API endpoints
    - Test API calls directly
 
@@ -44,7 +48,8 @@ Open these URLs in your browser:
 ✅ Backend API (NestJS) - Port 3006
 ✅ Admin Dashboard (React) - Port 3007
 ✅ Merchant Dashboard (React) - Port 3008
-✅ Customer Webview (Next.js) - Port 3009
+✅ Financier Dashboard (React) - Port 3009
+✅ Customer Webview (Next.js) - Port 3010
 ✅ Shared Types Package
 ```
 
@@ -87,7 +92,8 @@ npm run dev
 npm run dev:api         # Backend only (Port 3006)
 npm run dev:admin       # Admin dashboard only (Port 3007)
 npm run dev:merchant    # Merchant dashboard only (Port 3008)
-npm run dev:webview     # Customer webview only (Port 3009)
+npm run dev:financier   # Financier dashboard only (Port 3009)
+npm run dev:webview     # Customer webview only (Port 3010)
 ```
 
 ### Build for Production

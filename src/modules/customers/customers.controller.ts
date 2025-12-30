@@ -22,6 +22,7 @@ import { CreateCustomerDto } from './dto/create-customer.dto';
 import { UpdateCustomerDto } from './dto/update-customer.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
+import { ApiKeyGuard } from '../auth/guards/api-key.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { ApiResponse } from '../../common/helpers/response.helper';
 
@@ -112,6 +113,36 @@ export class CustomersController {
       customers,
       'Merchant customers retrieved successfully',
     );
+  }
+
+  @Get('by-email/:email')
+  @UseGuards(ApiKeyGuard)
+  @ApiOperation({ summary: 'Get customer by email (requires API key)' })
+  @ApiParam({ name: 'email', description: 'Customer email address' })
+  @ApiResponseDecorator({
+    status: 200,
+    description: 'Customer retrieved successfully',
+  })
+  @ApiResponseDecorator({ status: 401, description: 'Unauthorized - Invalid API key' })
+  @ApiResponseDecorator({ status: 404, description: 'Customer not found' })
+  async findByEmail(@Param('email') email: string, @Request() req: any) {
+    this.logger.log(`GET /customers/by-email/${email} - Fetching customer by email`);
+    this.logger.log(`Merchant: ${req.merchant?.businessName} (${req.merchant?.merchantId})`);
+
+    try {
+      const customer = await this.customersService.findByEmail(email);
+
+      if (!customer) {
+        this.logger.log(`Customer not found with email: ${email}`);
+        return ApiResponse.notFound('Customer not found');
+      }
+
+      this.logger.log(`Customer found: ${customer.firstName} ${customer.lastName}`);
+      return ApiResponse.success(customer, 'Customer retrieved successfully');
+    } catch (error) {
+      this.logger.error(`Error fetching customer by email: ${error.message}`);
+      return ApiResponse.error('Failed to fetch customer', error);
+    }
   }
 
   @Get('merchant/:merchantId')

@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CRL Pay SDK Demo</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .container {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      max-width: 600px;
+      width: 100%;
+      padding: 40px;
+    }
+
+    h1 {
+      color: #2d3748;
+      margin-bottom: 10px;
+      font-size: 32px;
+    }
+
+    p {
+      color: #718096;
+      margin-bottom: 30px;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    label {
+      display: block;
+      color: #4a5568;
+      font-weight: 600;
+      margin-bottom: 8px;
+      font-size: 14px;
+    }
+
+    input, select {
+      width: 100%;
+      padding: 12px 16px;
+      border: 2px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 16px;
+      transition: border-color 0.2s;
+    }
+
+    input:focus, select:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+
+    .button-group {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 30px;
+    }
+
+    button {
+      padding: 14px 24px;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-primary {
+      background: #667eea;
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: #5a67d8;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+
+    .btn-secondary {
+      background: #48bb78;
+      color: white;
+    }
+
+    .btn-secondary:hover {
+      background: #38a169;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(72, 187, 120, 0.4);
+    }
+
+    .btn-full {
+      grid-column: 1 / -1;
+    }
+
+    .info-box {
+      background: #ebf8ff;
+      border: 2px solid #90cdf4;
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 24px;
+    }
+
+    .info-box h3 {
+      color: #2c5282;
+      font-size: 14px;
+      margin-bottom: 8px;
+    }
+
+    .info-box p {
+      color: #2d3748;
+      font-size: 13px;
+      margin: 0;
+      line-height: 1.6;
+    }
+
+    .result {
+      margin-top: 24px;
+      padding: 16px;
+      border-radius: 8px;
+      display: none;
+    }
+
+    .result.success {
+      background: #f0fff4;
+      border: 2px solid #68d391;
+      display: block;
+    }
+
+    .result.error {
+      background: #fff5f5;
+      border: 2px solid #fc8181;
+      display: block;
+    }
+
+    .result h3 {
+      margin-bottom: 8px;
+      font-size: 16px;
+    }
+
+    .result pre {
+      background: rgba(0, 0, 0, 0.05);
+      padding: 12px;
+      border-radius: 4px;
+      overflow-x: auto;
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>CRL Pay SDK Demo</h1>
+    <p>Test the CRL Pay checkout integration</p>
+
+    <div class="info-box">
+      <h3>How it works</h3>
+      <p>
+        This demo shows how merchants can integrate CRL Pay into their websites using our JavaScript SDK.
+        The checkout opens in an iframe/popup, and communicates back to your page using postMessage.
+      </p>
+    </div>
+
+    <div class="form-group">
+      <label for="mode">Display Mode</label>
+      <select id="mode">
+        <option value="iframe">Iframe (Recommended)</option>
+        <option value="popup">Popup Window</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label for="amount">Amount (₦)</label>
+      <input type="number" id="amount" value="50000" placeholder="Enter amount">
+    </div>
+
+    <div class="form-group">
+      <label for="email">Customer Email</label>
+      <input type="email" id="email" value="customer@example.com" placeholder="customer@example.com">
+    </div>
+
+    <div class="form-group">
+      <label for="reference">Reference (Optional)</label>
+      <input type="text" id="reference" placeholder="Auto-generated if empty">
+    </div>
+
+    <div class="button-group">
+      <button class="btn-primary btn-full" onclick="startCheckout()">
+        Start Checkout
+      </button>
+      <button class="btn-secondary" onclick="testManualPayment()">
+        Test Manual Payment
+      </button>
+      <button class="btn-secondary" onclick="clearResults()">
+        Clear Results
+      </button>
+    </div>
+
+    <div id="result" class="result"></div>
+  </div>
+
+  <script src="/crlpay-sdk.js"></script>
+  <script>
+    let crlpay;
+
+    function initSDK() {
+      const mode = document.getElementById('mode').value;
+
+      crlpay = new CRLPay({
+        merchantId: 'MERCHANT_DEMO_123',
+        publicKey: 'pk_test_demo_key',
+        mode: mode,
+      });
+
+      console.log('CRL Pay SDK initialized', { mode });
+    }
+
+    function startCheckout() {
+      initSDK();
+
+      const amount = parseFloat(document.getElementById('amount').value);
+      const email = document.getElementById('email').value;
+      const reference = document.getElementById('reference').value;
+
+      if (!amount || amount <= 0) {
+        showResult('error', 'Please enter a valid amount');
+        return;
+      }
+
+      if (!email) {
+        showResult('error', 'Please enter a customer email');
+        return;
+      }
+
+      crlpay.checkout({
+        amount: amount,
+        email: email,
+        reference: reference || undefined,
+        metadata: {
+          product: 'Demo Product',
+          category: 'Electronics',
+        },
+        onSuccess: function(data) {
+          console.log('Payment successful', data);
+          showResult('success', 'Checkout Successful!', data);
+        },
+        onClose: function() {
+          console.log('Checkout closed');
+          showResult('info', 'Checkout was closed');
+        },
+        onError: function(error) {
+          console.error('Payment error', error);
+          showResult('error', 'Checkout Error', error);
+        },
+      });
+    }
+
+    function testManualPayment() {
+      initSDK();
+
+      // Demo payment ID - in production, this would come from your system
+      const demoPaymentId = 'PAYMENT_DEMO_' + Date.now();
+
+      crlpay.makePayment({
+        paymentId: demoPaymentId,
+        onSuccess: function(data) {
+          console.log('Manual payment successful', data);
+          showResult('success', 'Payment Successful!', data);
+        },
+        onClose: function() {
+          console.log('Payment page closed');
+          showResult('info', 'Payment page was closed');
+        },
+        onError: function(error) {
+          console.error('Payment error', error);
+          showResult('error', 'Payment Error', error);
+        },
+      });
+    }
+
+    function showResult(type, message, data) {
+      const resultDiv = document.getElementById('result');
+      resultDiv.className = 'result ' + type;
+
+      let html = `<h3>${message}</h3>`;
+
+      if (data) {
+        html += `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+      }
+
+      resultDiv.innerHTML = html;
+    }
+
+    function clearResults() {
+      const resultDiv = document.getElementById('result');
+      resultDiv.className = 'result';
+      resultDiv.innerHTML = '';
+    }
+
+    // Initialize on page load
+    console.log('CRL Pay Demo Page Loaded');
+    console.log('Open browser console to see event logs');
+  </script>
+</body>
+</html>

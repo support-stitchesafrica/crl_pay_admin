@@ -42,7 +42,7 @@ export class CreditScoringService {
     customer: Customer,
     merchantId: string,
     requestedAmount: number,
-    requestedTenure: number,
+    requestedTenure?: number,
     deviceFingerprint?: string,
     ipAddress?: string,
   ): Promise<ScoringResult> {
@@ -65,10 +65,11 @@ export class CreditScoringService {
     );
 
     // 3. Financial Capacity Score (0-300)
+    // Use default tenure of 4 weeks if not provided (will be refined after plan selection)
     const financialScore = this.assessFinancialCapacity(
       customer,
       requestedAmount,
-      requestedTenure,
+      requestedTenure || 4,
       decisionReasons,
       riskFlags,
       recommendations,
@@ -107,12 +108,12 @@ export class CreditScoringService {
       decisionReasons,
     );
 
-    // Calculate approved amount and terms
+    // Determine approved terms
     const { approvedAmount, approvedTenure, interestRate } = this.calculateApprovedTerms(
       decision,
       creditTier,
       requestedAmount,
-      requestedTenure,
+      requestedTenure || 4,
       totalScore,
     );
 

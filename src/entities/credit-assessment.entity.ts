@@ -5,7 +5,7 @@ export interface CreditAssessment {
 
   // Request Details
   requestedAmount: number;
-  requestedTenure: number; // in weeks
+  requestedTenure?: number; // in weeks (optional - can be determined after plan selection)
   purpose?: string;
 
   // Identity Verification

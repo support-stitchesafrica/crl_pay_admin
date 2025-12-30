@@ -57,8 +57,8 @@ export class CreditService {
 
         // Request details
         requestedAmount: assessCreditDto.requestedAmount,
-        requestedTenure: assessCreditDto.requestedTenure,
-        purpose: assessCreditDto.purpose,
+        ...(assessCreditDto.requestedTenure !== undefined && { requestedTenure: assessCreditDto.requestedTenure }),
+        ...(assessCreditDto.purpose && { purpose: assessCreditDto.purpose }),
 
         // Identity verification
         bvnVerified: scoringResult.scores.bvnScore === 100,
@@ -73,8 +73,6 @@ export class CreditService {
         behavioralScore: scoringResult.scores.behavioralScore,
 
         // Financial capacity
-        estimatedIncome: undefined, // Will be enhanced with bank analysis
-        debtToIncomeRatio: undefined,
         financialScore: scoringResult.scores.financialScore,
 
         // Merchant relationship
@@ -92,9 +90,9 @@ export class CreditService {
         totalScore: scoringResult.scores.totalScore,
         creditTier: scoringResult.creditTier,
         decision: scoringResult.decision,
-        approvedAmount: scoringResult.approvedAmount,
-        approvedTenure: scoringResult.approvedTenure,
-        interestRate: scoringResult.interestRate,
+        ...(scoringResult.approvedAmount !== undefined && { approvedAmount: scoringResult.approvedAmount }),
+        ...(scoringResult.approvedTenure !== undefined && { approvedTenure: scoringResult.approvedTenure }),
+        ...(scoringResult.interestRate !== undefined && { interestRate: scoringResult.interestRate }),
 
         // Reasons & explanations
         decisionReasons: scoringResult.decisionReasons,

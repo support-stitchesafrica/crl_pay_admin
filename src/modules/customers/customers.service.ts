@@ -76,8 +76,8 @@ export class CustomersService {
         status: 'active',
 
         // Metadata
-        deviceFingerprint: createCustomerDto.deviceFingerprint,
-        ipAddress: createCustomerDto.ipAddress,
+        ...(createCustomerDto.deviceFingerprint && { deviceFingerprint: createCustomerDto.deviceFingerprint }),
+        ...(createCustomerDto.ipAddress && { ipAddress: createCustomerDto.ipAddress }),
         registeredVia: createCustomerDto.merchantId,
         createdAt: new Date(),
         updatedAt: new Date(),

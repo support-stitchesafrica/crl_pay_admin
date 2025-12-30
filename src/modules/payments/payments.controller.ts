@@ -14,15 +14,85 @@ import { PaymentsService } from './payments.service';
 import { ProcessPaymentDto } from './dto/process-payment.dto';
 import { ApiResponse } from '../../common/helpers/response.helper';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { ApiKeyGuard } from '../auth/guards/api-key.guard';
+import { PaystackService } from './paystack.service';
 
 @ApiTags('Payments')
 @Controller('payments')
-@UseGuards(JwtAuthGuard)
-@ApiBearerAuth()
 export class PaymentsController {
-  constructor(private readonly paymentsService: PaymentsService) {}
+  constructor(
+    private readonly paymentsService: PaymentsService,
+    private readonly paystackService: PaystackService,
+  ) {}
+
+  @Post('initialize-authorization')
+  @UseGuards(ApiKeyGuard)
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Initialize Paystack authorization for card tokenization (requires API key)' })
+  @ApiResponseDecorator({ status: 201, description: 'Authorization initialized successfully' })
+  @ApiResponseDecorator({ status: 400, description: 'Bad request' })
+  @ApiResponseDecorator({ status: 401, description: 'Unauthorized - Invalid API key' })
+  async initializeAuthorization(
+    @Body() body: { email: string; amount: number; merchantId: string; customerId: string; metadata?: any },
+  ) {
+    try {
+      const reference = `AUTH_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+      const authorizationUrl = await this.paystackService.generatePaymentLink({
+        email: body.email,
+        amount: body.amount * 100, // Convert to kobo
+        reference,
+        metadata: {
+          customerId: body.customerId,
+          merchantId: body.merchantId,
+          purpose: 'card_authorization',
+          ...body.metadata,
+        },
+      });
+
+      return ApiResponse.success(
+        {
+          authorizationUrl,
+          reference,
+        },
+        'Authorization initialized successfully',
+      );
+    } catch (error) {
+      return ApiResponse.error(error.message, error);
+    }
+  }
+
+  @Get('verify/:reference')
+  @UseGuards(ApiKeyGuard)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Verify Paystack transaction and get authorization code (requires API key)' })
+  @ApiResponseDecorator({ status: 200, description: 'Transaction verified successfully' })
+  @ApiResponseDecorator({ status: 400, description: 'Transaction verification failed' })
+  @ApiResponseDecorator({ status: 401, description: 'Unauthorized - Invalid API key' })
+  async verifyTransaction(@Param('reference') reference: string) {
+    try {
+      const verification = await this.paystackService.verifyTransaction(reference);
+
+      return ApiResponse.success(
+        {
+          status: verification.data.status,
+          amount: verification.data.amount,
+          reference: verification.data.reference,
+          authorizationCode: verification.data.authorization?.authorization_code,
+          authorization: verification.data.authorization,
+          customer: verification.data.customer,
+          paidAt: verification.data.paid_at,
+        },
+        'Transaction verified successfully',
+      );
+    } catch (error) {
+      return ApiResponse.error(error.message, error);
+    }
+  }
 
   @Post()
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Create and process a payment' })
   @ApiResponseDecorator({ status: 201, description: 'Payment created successfully' })
@@ -37,6 +107,8 @@ export class PaymentsController {
   }
 
   @Post(':id/retry')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Retry a failed payment' })
   @ApiResponseDecorator({ status: 200, description: 'Payment retry initiated' })
@@ -51,6 +123,8 @@ export class PaymentsController {
   }
 
   @Post(':id/generate-link')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Generate manual payment link' })
   @ApiResponseDecorator({ status: 200, description: 'Payment link generated' })
@@ -65,6 +139,8 @@ export class PaymentsController {
   }
 
   @Get('verify')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Verify payment via Paystack reference' })
   @ApiResponseDecorator({ status: 200, description: 'Payment verified' })
@@ -79,6 +155,8 @@ export class PaymentsController {
   }
 
   @Get()
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Get all payments with optional filters' })
   @ApiResponseDecorator({ status: 200, description: 'Payments retrieved successfully' })
@@ -104,6 +182,8 @@ export class PaymentsController {
   }
 
   @Get('stats')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Get payment statistics' })
   @ApiResponseDecorator({ status: 200, description: 'Statistics retrieved successfully' })
@@ -120,6 +200,8 @@ export class PaymentsController {
   }
 
   @Get(':id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Get payment by ID' })
   @ApiResponseDecorator({ status: 200, description: 'Payment retrieved successfully' })

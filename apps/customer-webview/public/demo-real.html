@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CRL Pay - Real Demo (Stitches Africa)</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 500px;
+            width: 100%;
+            padding: 40px;
+        }
+
+        .logo {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .logo h1 {
+            color: #667eea;
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .logo p {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .merchant-info {
+            background: #f8f9ff;
+            border: 2px solid #e5e7ff;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+
+        .merchant-info h3 {
+            color: #667eea;
+            font-size: 18px;
+            margin-bottom: 12px;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .info-row .label {
+            color: #666;
+        }
+
+        .info-row .value {
+            color: #333;
+            font-weight: 600;
+        }
+
+        .product-card {
+            border: 2px solid #e5e7ff;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .product-card h3 {
+            color: #333;
+            font-size: 18px;
+            margin-bottom: 8px;
+        }
+
+        .product-card .price {
+            color: #667eea;
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 12px;
+        }
+
+        .product-card p {
+            color: #666;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .buy-button {
+            width: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            padding: 16px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-bottom: 20px;
+        }
+
+        .buy-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .buy-button:active {
+            transform: translateY(0);
+        }
+
+        .info-box {
+            background: #fff9e6;
+            border: 1px solid #ffd700;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 20px;
+        }
+
+        .info-box p {
+            color: #856404;
+            font-size: 13px;
+            line-height: 1.5;
+            margin: 0;
+        }
+
+        .status-box {
+            background: #e8f5e9;
+            border: 1px solid #4caf50;
+            border-radius: 8px;
+            padding: 12px;
+            margin-top: 20px;
+        }
+
+        .status-box h4 {
+            color: #2e7d32;
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+
+        .status-box pre {
+            background: white;
+            border: 1px solid #4caf50;
+            border-radius: 6px;
+            padding: 10px;
+            font-size: 12px;
+            overflow-x: auto;
+            color: #2e7d32;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 24px;
+            }
+
+            .logo h1 {
+                font-size: 24px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">
+            <h1>🏪 Stitches Africa</h1>
+            <p>Fashion & Clothing Store</p>
+        </div>
+
+        <div class="merchant-info">
+            <h3>Merchant Information</h3>
+            <div class="info-row">
+                <span class="label">Business:</span>
+                <span class="value">Stitches Africa</span>
+            </div>
+            <div class="info-row">
+                <span class="label">ID:</span>
+                <span class="value">mzPmbALb7FOktvhn8Frh</span>
+            </div>
+            <div class="info-row">
+                <span class="label">Status:</span>
+                <span class="value" style="color: #4caf50;">✓ Approved</span>
+            </div>
+        </div>
+
+        <div class="product-card">
+            <h3>Premium Designer Dress</h3>
+            <div class="price">₦45,000</div>
+            <p>Elegant evening dress made from premium fabric. Perfect for special occasions and events.</p>
+        </div>
+
+        <button id="buyNowBtn" class="buy-button">
+            Buy Now, Pay Later with CRL Pay
+        </button>
+
+        <div class="info-box">
+            <p>
+                <strong>💳 Flexible Payment:</strong> Split your payment into weekly or monthly installments with low interest rates. Get approved in minutes!
+            </p>
+        </div>
+
+        <div id="statusBox" class="status-box" style="display: none;">
+            <h4>Transaction Status</h4>
+            <pre id="statusData"></pre>
+        </div>
+    </div>
+
+    <!-- Load CRL Pay SDK -->
+    <script src="/crlpay-sdk.js"></script>
+
+    <script>
+        // Product details
+        const product = {
+            name: 'Premium Designer Dress',
+            price: 45000,
+            description: 'Elegant evening dress made from premium fabric'
+        };
+
+        // Real merchant ID and API keys from Firestore
+        const merchantId = 'mzPmbALb7FOktvhn8Frh';
+        const publicKey = 'pk_1b689d60c35a36c014b0809437bf55b8c063ca25d893a8c8';
+
+        // Initialize CRL Pay with merchant ID and public key
+        const crlpay = new CRLPay({
+            merchantId: merchantId,
+            publicKey: publicKey,
+            mode: 'iframe' // or 'popup'
+        });
+
+        // Buy Now button handler
+        document.getElementById('buyNowBtn').addEventListener('click', function() {
+            crlpay.checkout({
+                merchantId: merchantId,
+                amount: product.price,
+                email: 'customer@example.com',
+                reference: 'STI_' + Date.now(),
+                metadata: {
+                    product: product.name,
+                    description: product.description
+                },
+                onSuccess: function(response) {
+                    showStatus('Success!', response);
+                    console.log('Transaction successful:', response);
+                },
+                onError: function(error) {
+                    showStatus('Error', error);
+                    console.error('Transaction error:', error);
+                },
+                onClose: function() {
+                    console.log('Checkout closed');
+                }
+            });
+        });
+
+        function showStatus(title, data) {
+            const statusBox = document.getElementById('statusBox');
+            const statusData = document.getElementById('statusData');
+            statusBox.style.display = 'block';
+            statusData.textContent = JSON.stringify(data, null, 2);
+
+            // Scroll to status box
+            statusBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+    </script>
+</body>
+</html>

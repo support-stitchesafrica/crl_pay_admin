@@ -11,6 +11,7 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { PlanMappingsService } from './plan-mappings.service';
+import { ApiResponse } from '../../common/helpers/response.helper';
 
 @ApiTags('Plan Merchant Mappings')
 @Controller('plan-merchant-mappings')
@@ -24,17 +25,27 @@ export class PlanMappingsController {
     @Query('merchantId') merchantId?: string,
     @Query('financierId') financierId?: string,
   ) {
-    return this.planMappingsService.getMappings({
-      planId,
-      merchantId,
-      financierId,
-    });
+    try {
+      const mappings = await this.planMappingsService.getMappings({
+        planId,
+        merchantId,
+        financierId,
+      });
+      return ApiResponse.success(mappings, 'Mappings retrieved successfully');
+    } catch (error) {
+      return ApiResponse.error(error.message, error);
+    }
   }
 
   @Get(':mappingId')
   @ApiOperation({ summary: 'Get mapping by ID' })
   async getMappingById(@Param('mappingId') mappingId: string) {
-    return this.planMappingsService.getMappingById(mappingId);
+    try {
+      const mapping = await this.planMappingsService.getMappingById(mappingId);
+      return ApiResponse.success(mapping, 'Mapping retrieved successfully');
+    } catch (error) {
+      return ApiResponse.error(error.message, error);
+    }
   }
 
   @Post()

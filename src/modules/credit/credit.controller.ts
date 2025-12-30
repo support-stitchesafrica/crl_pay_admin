@@ -17,6 +17,7 @@ import {
 import { CreditService } from './credit.service';
 import { AssessCreditDto } from './dto/assess-credit.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { ApiKeyGuard } from '../auth/guards/api-key.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { ApiResponse } from '../../common/helpers/response.helper';
@@ -29,14 +30,14 @@ export class CreditController {
   constructor(private readonly creditService: CreditService) {}
 
   @Post('assess')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Perform credit assessment for a customer' })
+  @UseGuards(ApiKeyGuard)
+  @ApiOperation({ summary: 'Perform credit assessment for a customer (requires API key)' })
   @ApiResponseDecorator({
     status: 201,
     description: 'Credit assessment completed successfully',
   })
   @ApiResponseDecorator({ status: 400, description: 'Invalid input data' })
+  @ApiResponseDecorator({ status: 401, description: 'Unauthorized - Invalid API key' })
   @ApiResponseDecorator({ status: 404, description: 'Customer not found' })
   async assessCredit(@Body() assessCreditDto: AssessCreditDto) {
     this.logger.log(`POST /credit/assess - Assessing credit for customer: ${assessCreditDto.customerId}`);

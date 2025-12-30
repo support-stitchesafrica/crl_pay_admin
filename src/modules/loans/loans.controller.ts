@@ -17,19 +17,20 @@ import { CreateLoanDto } from './dto/create-loan.dto';
 import { UpdateLoanDto, AuthorizeCardDto, RecordPaymentDto } from './dto/update-loan.dto';
 import { ApiResponse } from '../../common/helpers/response.helper';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { ApiKeyGuard } from '../auth/guards/api-key.guard';
 
 @ApiTags('Loans')
 @Controller('loans')
-@UseGuards(JwtAuthGuard)
-@ApiBearerAuth()
 export class LoansController {
   constructor(private readonly loansService: LoansService) {}
 
   @Post()
+  @UseGuards(ApiKeyGuard)
   @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({ summary: 'Create a new loan' })
+  @ApiOperation({ summary: 'Create a new loan (requires API key)' })
   @ApiResponseDecorator({ status: 201, description: 'Loan created successfully' })
   @ApiResponseDecorator({ status: 400, description: 'Bad request' })
+  @ApiResponseDecorator({ status: 401, description: 'Unauthorized - Invalid API key' })
   async create(
     @Body() createLoanDto: CreateLoanDto,
     @Query('merchantInterestRate') merchantInterestRate: number = 15, // Default 15% if not provided
@@ -48,9 +49,11 @@ export class LoansController {
   }
 
   @Post(':id/authorize-card')
+  @UseGuards(ApiKeyGuard)
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Authorize card for loan and activate it' })
+  @ApiOperation({ summary: 'Authorize card for loan and activate it (requires API key)' })
   @ApiResponseDecorator({ status: 200, description: 'Card authorized successfully' })
+  @ApiResponseDecorator({ status: 401, description: 'Unauthorized - Invalid API key' })
   @ApiResponseDecorator({ status: 404, description: 'Loan not found' })
   async authorizeCard(@Param('id') id: string, @Body() authorizeCardDto: AuthorizeCardDto) {
     try {
@@ -62,6 +65,8 @@ export class LoansController {
   }
 
   @Post('record-payment')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Record a payment for a loan installment' })
   @ApiResponseDecorator({ status: 200, description: 'Payment recorded successfully' })
@@ -76,6 +81,8 @@ export class LoansController {
   }
 
   @Get('me')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Get own loans (Merchant only)' })
   @ApiResponseDecorator({ status: 200, description: 'Loans retrieved successfully' })
@@ -106,6 +113,8 @@ export class LoansController {
   }
 
   @Get('me/stats')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Get own loan statistics (Merchant only)' })
   @ApiResponseDecorator({ status: 200, description: 'Statistics retrieved successfully' })
@@ -126,6 +135,8 @@ export class LoansController {
   }
 
   @Get()
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Get all loans with optional filters (Admin/Financier)' })
   @ApiResponseDecorator({ status: 200, description: 'Loans retrieved successfully' })
@@ -149,6 +160,8 @@ export class LoansController {
   }
 
   @Get('merchant/:merchantId/stats')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Get loan statistics for a merchant (Admin/Financier)' })
   @ApiResponseDecorator({ status: 200, description: 'Statistics retrieved successfully' })
@@ -162,6 +175,8 @@ export class LoansController {
   }
 
   @Get(':id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Get loan by ID' })
   @ApiResponseDecorator({ status: 200, description: 'Loan retrieved successfully' })
@@ -176,6 +191,8 @@ export class LoansController {
   }
 
   @Put(':id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Update loan' })
   @ApiResponseDecorator({ status: 200, description: 'Loan updated successfully' })
@@ -190,6 +207,8 @@ export class LoansController {
   }
 
   @Post(':id/cancel')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Cancel a pending loan' })
   @ApiResponseDecorator({ status: 200, description: 'Loan cancelled successfully' })
