@@ -179,14 +179,19 @@ Stores financing plans created by financiers with specific terms and eligibility
   description?: string;            // Plan description
 
   // Loan Terms
-  duration: number;                // Duration in months
-  installments: number;            // Number of installments
+  tenor: {
+    value: number;                 // Duration value (e.g., 6, 12, 90)
+    period: 'DAYS' | 'WEEKS' | 'MONTHS' | 'YEARS';
+  };
   interestRate: number;            // Interest rate percentage (e.g., 5 for 5%)
-  minAmount: number;               // Minimum loan amount (e.g., 10000)
-  maxAmount: number;               // Maximum loan amount (e.g., 500000)
+  minimumAmount: number;           // Minimum loan amount (e.g., 10000)
+  maximumAmount: number;           // Maximum loan amount (e.g., 500000)
 
   // Payment Terms
-  gracePeriod: number;             // Grace period in days before late fees apply
+  gracePeriod: {
+    value: number;                 // Grace period value
+    period: 'DAYS' | 'WEEKS' | 'MONTHS';
+  };
   lateFee: {
     type: 'fixed' | 'percentage';
     amount: number;                // Amount or percentage
@@ -211,9 +216,15 @@ Stores financing plans created by financiers with specific terms and eligibility
   };
 
   // Status & Availability
-  status: 'active' | 'inactive' | 'suspended';
-  totalFundsAllocated: number;     // Total funds allocated to this plan
+  status: 'pending' | 'approved' | 'inactive';
+  isActive: boolean;               // Whether plan is currently active
+  totalFundsAllocated: number;     // Total funds allocated to this plan by financier
+  fundsAllocatedToMerchants: number; // Funds allocated to merchants via mappings
   totalLoansCreated: number;       // Number of loans created under this plan
+
+  // Admin Approval
+  approvedBy?: string;             // Admin ID who approved
+  approvedAt?: Timestamp;
 
   // Timestamps
   createdAt: Timestamp;
@@ -249,40 +260,27 @@ Maps financing plans to merchants, controlling which merchants can offer which p
   financierId: string;             // Reference to financier (for quick lookup)
 
   // Mapping Details
-  status: 'active' | 'inactive' | 'pending_approval';
+  status: 'active' | 'inactive' | 'suspended';
+
+  // Fund Allocation
+  fundsAllocated: number;          // Total funds allocated to this merchant for this plan
+  currentAllocation: number;       // Funds currently in use (active loans)
+  expirationDate: Timestamp;       // When this mapping expires
 
   // Usage Tracking
-  availableFunds: number;          // Funds available for this merchant from this plan
-  allocatedFunds: number;          // Funds currently tied up in active loans
+  totalLoans: number;              // Total loans created under this mapping
   totalDisbursed: number;          // Lifetime disbursed to this merchant
   totalRepaid: number;             // Lifetime repaid from this merchant
+  defaultRate: number;             // Default rate percentage
 
-  // Limits (optional - can override plan limits)
-  merchantSpecificLimits?: {
-    maxLoanAmount?: number;        // Override plan's max amount for this merchant
-    maxActiveLoa ns?: number;       // Max active loans allowed for this merchant
-    monthlyDisbursementLimit?: number; // Max disbursement per month
-  };
-
-  // Performance Metrics
-  performanceMetrics: {
-    totalLoans: number;            // Total loans created
-    activeLoans: number;           // Currently active loans
-    completedLoans: number;        // Successfully completed loans
-    defaultedLoans: number;        // Defaulted loans
-    defaultRate: number;           // Default rate percentage
-    repaymentRate: number;         // Repayment rate percentage
-  };
-
-  // Admin Approval
-  approvedBy?: string;             // Admin ID who approved mapping
-  approvedAt?: Timestamp;
-  notes?: string;                  // Admin notes on the mapping
+  // Mapping Metadata
+  mappedBy: string;                // Admin who created the mapping
+  mappedAt: Timestamp;             // When mapping was created
+  lastTransactionAt?: Timestamp;   // Last loan transaction timestamp
 
   // Timestamps
   createdAt: Timestamp;
   updatedAt: Timestamp;
-  activatedAt?: Timestamp;
 }
 ```
 
