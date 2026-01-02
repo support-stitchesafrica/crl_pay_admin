@@ -23,5 +23,5 @@ export interface PlanMerchantMapping {
 export const getMappings = async (financierId?: string): Promise<PlanMerchantMapping[]> => {
   const params = financierId ? { financierId } : {};
   const response = await api.get('/plan-merchant-mappings', { params });
-  return response.data;
+  return response.data.data || response.data;
 };

@@ -10,6 +10,7 @@ import {
   HttpStatus,
   UseGuards,
   Request,
+  Req,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse as ApiResponseDecorator, ApiBearerAuth } from '@nestjs/swagger';
 import { LoansService } from './loans.service';
@@ -32,13 +33,20 @@ export class LoansController {
   @ApiResponseDecorator({ status: 400, description: 'Bad request' })
   @ApiResponseDecorator({ status: 401, description: 'Unauthorized - Invalid API key' })
   async create(
+    @Req() request: any,
     @Body() createLoanDto: CreateLoanDto,
     @Query('merchantInterestRate') merchantInterestRate: number = 15, // Default 15% if not provided
     @Query('merchantPenaltyRate') merchantPenaltyRate: number = 5, // Default 5% penalty if not provided
   ) {
     try {
+      // Extract merchantId from authenticated merchant (populated by ApiKeyGuard)
+      const merchantId = request.merchant?.merchantId;
+      
+      // Override merchantId from request body with authenticated merchant
+      const loanDto = { ...createLoanDto, merchantId };
+      
       const loan = await this.loansService.create(
-        createLoanDto,
+        loanDto,
         merchantInterestRate,
         merchantPenaltyRate,
       );

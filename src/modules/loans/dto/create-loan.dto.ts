@@ -27,9 +27,10 @@ export class TenorDto {
 }
 
 export class CreateLoanDto {
-  @ApiProperty({ example: 'merchant_123', description: 'Merchant ID' })
+  @ApiProperty({ example: 'merchant_123', description: 'Merchant ID (auto-populated from API key)', required: false })
+  @IsOptional()
   @IsString()
-  merchantId: string;
+  merchantId?: string;
 
   @ApiProperty({ example: 'customer_456', description: 'Customer ID' })
   @IsString()

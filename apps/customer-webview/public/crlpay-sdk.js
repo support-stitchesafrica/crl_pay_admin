@@ -7,7 +7,6 @@
  *
  * Example:
  * const crlpay = new CRLPay({
- *   merchantId: 'your-merchant-id',
  *   publicKey: 'your-public-key',
  * });
  *
@@ -28,11 +27,10 @@
 
   class CRLPay {
     constructor(config) {
-      if (!config.merchantId) {
-        throw new Error('merchantId is required');
+      if (!config.publicKey) {
+        throw new Error('publicKey is required');
       }
 
-      this.merchantId = config.merchantId;
       this.publicKey = config.publicKey;
       this.mode = config.mode || 'iframe'; // 'iframe' or 'popup'
       this.baseUrl = config.baseUrl || WEBVIEW_URL;
@@ -60,7 +58,6 @@
       }
 
       this.options = {
-        merchantId: this.merchantId,
         amount: options.amount,
         email: options.email,
         reference: options.reference || this._generateReference(),
@@ -124,11 +121,10 @@
      */
     _buildCheckoutUrl() {
       const params = new URLSearchParams({
-        merchantId: this.options.merchantId,
         amount: this.options.amount,
         email: this.options.email,
         reference: this.options.reference,
-        apiKey: this.publicKey || '', // Add public key to URL
+        apiKey: this.publicKey,
       });
 
       return `${this.baseUrl}/checkout?${params.toString()}`;

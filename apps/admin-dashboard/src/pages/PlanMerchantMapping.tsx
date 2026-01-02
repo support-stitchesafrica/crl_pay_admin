@@ -79,10 +79,10 @@ export default function PlanMerchantMappingPage() {
         financierService.getAll('approved'),
       ]);
 
-      setMappings(mappingsData);
-      setPlans(plansData.filter((p) => p.status === 'approved' && p.isActive));
-      setMerchants(merchantsData.filter((m) => m.status === 'approved'));
-      setFinanciers(financiersData);
+      setMappings(Array.isArray(mappingsData) ? mappingsData : []);
+      setPlans(Array.isArray(plansData) ? plansData.filter((p) => p.status === 'approved' && p.isActive) : []);
+      setMerchants(Array.isArray(merchantsData) ? merchantsData.filter((m) => m.status === 'approved') : []);
+      setFinanciers(Array.isArray(financiersData) ? financiersData : []);
     } catch (err: any) {
       const errorMsg = err.response?.data?.message || 'Failed to load data';
       setError(errorMsg);

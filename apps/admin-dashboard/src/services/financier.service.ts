@@ -67,7 +67,7 @@ export const approveFunds = async (
 export const getPlans = async (financierId?: string): Promise<FinancingPlan[]> => {
   const url = financierId ? `/financiers/${financierId}/plans` : '/financing-plans';
   const response = await api.get(url);
-  return response.data;
+  return response.data.data || response.data;
 };
 
 /**
@@ -75,7 +75,7 @@ export const getPlans = async (financierId?: string): Promise<FinancingPlan[]> =
  */
 export const getPlanById = async (planId: string): Promise<FinancingPlan> => {
   const response = await api.get(`/financing-plans/${planId}`);
-  return response.data;
+  return response.data.data || response.data;
 };
 
 /**
@@ -93,7 +93,7 @@ export const getMappings = async (filters?: {
 
   const url = `/plan-merchant-mappings${params.toString() ? `?${params.toString()}` : ''}`;
   const response = await api.get(url);
-  return response.data;
+  return response.data.data || response.data;
 };
 
 /**

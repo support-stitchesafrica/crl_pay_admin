@@ -7,10 +7,10 @@ export class AssessCreditDto {
   @IsString()
   customerId: string;
 
-  @ApiProperty({ example: 'merch_123', description: 'Merchant ID' })
-  @IsNotEmpty()
+  @ApiProperty({ example: 'merch_123', description: 'Merchant ID (auto-populated from API key)', required: false })
+  @IsOptional()
   @IsString()
-  merchantId: string;
+  merchantId?: string;
 
   @ApiProperty({ example: 50000, description: 'Requested loan amount in NGN' })
   @IsNotEmpty()

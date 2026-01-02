@@ -15,6 +15,11 @@ interface CustomerData {
   address: string;
   city: string;
   state: string;
+  hasSavedCard?: boolean;
+  savedAuthorizationCode?: string;
+  cardType?: string;
+  cardLast4?: string;
+  cardBank?: string;
 }
 
 interface FinancingPlan {
@@ -99,6 +104,9 @@ export default function CheckoutPage() {
   const [customerId, setCustomerId] = useState<string>('');
   const [creditScore, setCreditScore] = useState<number>(0);
   const [countdown, setCountdown] = useState(5);
+  const [checkingCustomer, setCheckingCustomer] = useState(true);
+  const [paystackUrl, setPaystackUrl] = useState<string>('');
+  const [showPaystackIframe, setShowPaystackIframe] = useState(false);
 
   useEffect(() => {
     // Send message to parent that webview is ready
@@ -107,6 +115,8 @@ export default function CheckoutPage() {
     // Check if customer exists with the provided email
     if (customerEmail) {
       checkExistingCustomer(customerEmail);
+    } else {
+      setCheckingCustomer(false);
     }
   }, []);
 
@@ -151,6 +161,7 @@ export default function CheckoutPage() {
   });
 
   const checkExistingCustomer = async (email: string) => {
+    setCheckingCustomer(true);
     try {
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3006'}/api/v1/customers/by-email/${email}`,
@@ -181,14 +192,19 @@ export default function CheckoutPage() {
 
         // Proceed directly to credit check
         await performCreditAssessment(customer.customerId);
+      } else {
+        // Customer doesn't exist - show registration form
+        setCheckingCustomer(false);
       }
     } catch (err) {
       // Customer doesn't exist - show registration form
       console.log('New customer - showing registration form');
+      setCheckingCustomer(false);
     }
   };
 
   const performCreditAssessment = async (userId: string) => {
+    setCheckingCustomer(false); // Hide customer checking loader
     setLoading(true);
     setError(null);
     setStep('credit-check');
@@ -227,6 +243,33 @@ export default function CheckoutPage() {
 
         // Fetch real financing plans mapped to this merchant
         await fetchMappedPlans();
+        
+        // Check if customer has saved card authorization
+        try {
+          const customerResponse = await fetch(
+            `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3006'}/api/v1/customers/${userId}`,
+            { headers: getHeaders() }
+          );
+          
+          if (customerResponse.ok) {
+            const customerResult = await customerResponse.json();
+            const customer = customerResult.data;
+            
+            if (customer?.paystackAuthorizationCode) {
+              setCustomerData(prev => ({
+                ...prev,
+                hasSavedCard: true,
+                savedAuthorizationCode: customer.paystackAuthorizationCode,
+                cardType: customer.cardType,
+                cardLast4: customer.cardLast4,
+                cardBank: customer.cardBank,
+              }));
+            }
+          }
+        } catch (err) {
+          console.log('Could not check for saved card:', err);
+        }
+        
         setStep('plan-selection');
       } else {
         // Credit declined
@@ -419,18 +462,92 @@ export default function CheckoutPage() {
     setShowSchedule(false);
 
     try {
-      // Step 2: Perform credit assessment
-      setStep('credit-check');
+      // Check if customer has saved card - skip authorization if they do
+      if (customerData.hasSavedCard && customerData.savedAuthorizationCode) {
+        // Customer has saved card - create loan directly with saved authorization
+        setStep('credit-check');
+        await new Promise(resolve => setTimeout(resolve, 1000));
 
-      // In production, call credit assessment API
-      // For now, simulate approval
-      await new Promise(resolve => setTimeout(resolve, 2000));
+        // Create loan with saved authorization code
+        const loanResponse = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3006'}/api/v1/loans`,
+          {
+            method: 'POST',
+            headers: getHeaders(),
+            body: JSON.stringify({
+              merchantId: selectedPlan?.mapping.merchantId,
+              customerId,
+              principalAmount: amount,
+              frequency: selectedPlan?.frequency,
+              tenor: {
+                value: selectedPlan?.plan.tenor.value,
+                period: selectedPlan?.plan.tenor.period,
+              },
+              orderId: reference,
+              productDescription: `Purchase via CRL Pay - ${selectedPlan?.plan.name}`,
+              metadata: {
+                planId: selectedPlan?.plan.planId,
+                financierId: selectedPlan?.plan.financierId,
+                mappingId: selectedPlan?.mapping.mappingId,
+                interestRate: selectedPlan?.plan.interestRate,
+                repaymentSchedule,
+              },
+            }),
+          }
+        );
 
-      // Step 3: Create loan
-      setStep('card-authorization');
-      sendMessageToParent('plan_selected', { plan: selectedPlan, schedule: repaymentSchedule });
+        if (!loanResponse.ok) {
+          const errorData = await loanResponse.json();
+          throw new Error(errorData.message || 'Failed to create loan');
+        }
+
+        const loanData = await loanResponse.json();
+        const loan = loanData.data;
+        const loanId = loan?.loanId;
+
+        // Authorize card with saved authorization code
+        await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3006'}/api/v1/loans/${loanId}/authorize-card`,
+          {
+            method: 'POST',
+            headers: getHeaders(),
+            body: JSON.stringify({
+              authorizationCode: customerData.savedAuthorizationCode,
+              cardType: customerData.cardType || 'unknown',
+              last4: customerData.cardLast4 || '0000',
+              expiryMonth: '12',
+              expiryYear: '2025',
+              bank: customerData.cardBank || 'Unknown Bank',
+              paystackCustomerCode: '',
+            }),
+          }
+        );
+
+        // Show success
+        setStep('success');
+        sendMessageToParent('success', {
+          loanId,
+          customerId,
+          amount,
+          plan: selectedPlan,
+          repaymentSchedule,
+          authorizationCode: customerData.savedAuthorizationCode,
+          reference,
+          loan,
+          customer: customerData,
+          creditScore,
+        });
+
+        setTimeout(() => {
+          handleClose();
+        }, 5000);
+      } else {
+        // No saved card - proceed to card authorization
+        setStep('card-authorization');
+        sendMessageToParent('plan_selected', { plan: selectedPlan, schedule: repaymentSchedule });
+      }
     } catch (err: any) {
-      setError(err.message || 'Credit assessment failed');
+      setError(err.message || 'Failed to process payment');
       sendMessageToParent('error', { message: err.message });
     } finally {
       setLoading(false);
@@ -450,8 +567,7 @@ export default function CheckoutPage() {
           headers: getHeaders(),
           body: JSON.stringify({
             email: customerData.email,
-            amount: selectedPlan?.installmentAmount || 10000, // Amount for auth (₦100 minimum)
-            merchantId,
+            amount: 100, // ₦100 for card authorization only (not actual payment)
             customerId,
           }),
         }
@@ -462,126 +578,135 @@ export default function CheckoutPage() {
       }
 
       const initData = await initResponse.json();
-      const authorizationUrl = initData.data?.authorization_url;
+      const authorizationUrl = initData.data?.authorizationUrl;
 
       if (!authorizationUrl) {
         throw new Error('No authorization URL received');
       }
 
-      // Send message to parent to open Paystack
-      sendMessageToParent('card_authorization_required', {
-        url: authorizationUrl,
-        reference: initData.data?.reference,
-      });
+      // Load Paystack in iframe instead of popup
+      setPaystackUrl(authorizationUrl);
+      setShowPaystackIframe(true);
+      setLoading(false);
 
-      // Open Paystack in a new window/popup
-      const paystackWindow = window.open(authorizationUrl, 'paystack', 'width=500,height=700');
+      // Listen for Paystack completion via polling
+      const verifyReference = initData.data?.reference;
+      const pollInterval = setInterval(async () => {
+        try {
+          const verifyResponse = await fetch(
+            `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3006'}/api/v1/payments/verify/${verifyReference}`,
+            { headers: getHeaders() }
+          );
 
-      // Poll for completion
-      const checkInterval = setInterval(async () => {
-        if (paystackWindow?.closed) {
-          clearInterval(checkInterval);
-          // Verify the transaction
-          try {
-            const verifyResponse = await fetch(
-              `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3006'}/api/v1/payments/verify/${initData.data?.reference}`
-            );
+          if (verifyResponse.ok) {
+            const verifyData = await verifyResponse.json();
+            if (verifyData.data?.status === 'success') {
+              clearInterval(pollInterval);
+              setShowPaystackIframe(false);
+              setLoading(true);
 
-            if (verifyResponse.ok) {
-              const verifyData = await verifyResponse.json();
-              if (verifyData.data?.status === 'success') {
-                const authorizationCode = verifyData.data?.authorization?.authorization_code;
+              const authorizationCode = verifyData.data?.authorizationCode;
+              const cardDetails = verifyData.data?.authorization;
 
-                // Step 2: Create loan record
-                const loanResponse = await fetch(
-                  `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3006'}/api/v1/loans/create`,
-                  {
-                    method: 'POST',
-                    headers: {
-                      'Content-Type': 'application/json',
+              // Step 2: Create loan record
+              const loanResponse = await fetch(
+                `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3006'}/api/v1/loans`,
+                {
+                  method: 'POST',
+                  headers: getHeaders(),
+                  body: JSON.stringify({
+                    merchantId: selectedPlan?.mapping.merchantId,
+                    customerId,
+                    principalAmount: amount,
+                    frequency: selectedPlan?.frequency,
+                    tenor: {
+                      value: selectedPlan?.plan.tenor.value,
+                      period: selectedPlan?.plan.tenor.period,
                     },
-                    body: JSON.stringify({
-                      customerId,
-                      merchantId,
-                      amount,
-                      plan: selectedPlan,
+                    orderId: reference,
+                    productDescription: `Purchase via CRL Pay - ${selectedPlan?.plan.name}`,
+                    metadata: {
+                      planId: selectedPlan?.plan.planId,
+                      financierId: selectedPlan?.plan.financierId,
+                      mappingId: selectedPlan?.mapping.mappingId,
+                      interestRate: selectedPlan?.plan.interestRate,
                       repaymentSchedule,
-                      authorizationCode,
-                      reference,
-                    }),
-                  }
-                );
-
-                if (!loanResponse.ok) {
-                  throw new Error('Failed to create loan record');
+                    },
+                  }),
                 }
+              );
 
-                const loanData = await loanResponse.json();
-                const loanId = loanData.data?.loanId;
+              if (!loanResponse.ok) {
+                const errorData = await loanResponse.json();
+                throw new Error(errorData.message || 'Failed to create loan record');
+              }
 
-                // Step 3: Disburse funds to merchant
-                const disbursementResponse = await fetch(
-                  `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3006'}/api/v1/disbursements/process`,
+              const loanData = await loanResponse.json();
+              console.log('Loan creation response:', loanData);
+              const loan = loanData.data;
+              const loanId = loan?.loanId;
+
+              // Step 3: Authorize card for the loan
+              if (authorizationCode && cardDetails) {
+                const authorizeResponse = await fetch(
+                  `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3006'}/api/v1/loans/${loanId}/authorize-card`,
                   {
                     method: 'POST',
-                    headers: {
-                      'Content-Type': 'application/json',
-                    },
+                    headers: getHeaders(),
                     body: JSON.stringify({
-                      loanId,
-                      merchantId,
-                      amount,
+                      authorizationCode,
+                      cardType: cardDetails.card_type || 'unknown',
+                      last4: cardDetails.last4 || '0000',
+                      expiryMonth: cardDetails.exp_month || '12',
+                      expiryYear: cardDetails.exp_year || '2025',
+                      bank: cardDetails.bank || 'Unknown Bank',
+                      paystackCustomerCode: verifyData.data?.customer?.customer_code,
                     }),
                   }
                 );
 
-                if (!disbursementResponse.ok) {
-                  throw new Error('Failed to disburse funds');
+                if (!authorizeResponse.ok) {
+                  console.error('Failed to authorize card for loan');
                 }
-
-                const disbursementData = await disbursementResponse.json();
-
-                // Step 4: Show success and prepare to close
-                setStep('success');
-
-                // Send comprehensive success callback
-                sendMessageToParent('success', {
-                  loanId,
-                  customerId,
-                  merchantId,
-                  amount,
-                  plan: selectedPlan,
-                  repaymentSchedule,
-                  authorizationCode,
-                  reference,
-                  disbursement: disbursementData.data,
-                  customer: customerData,
-                  creditScore,
-                });
-
-                // Auto-close after 5 seconds
-                setTimeout(() => {
-                  handleClose();
-                }, 5000);
-              } else {
-                throw new Error('Card authorization failed');
               }
+
+              // Step 4: Show success
+              setStep('success');
+
+              sendMessageToParent('success', {
+                loanId,
+                customerId,
+                amount,
+                plan: selectedPlan,
+                repaymentSchedule,
+                authorizationCode,
+                reference,
+                loan,
+                customer: customerData,
+                creditScore,
+              });
+
+              setLoading(false);
+
+              setTimeout(() => {
+                handleClose();
+              }, 5000);
             }
-          } catch (err: any) {
-            setError(err.message || 'Failed to verify card authorization');
-          } finally {
-            setLoading(false);
           }
+        } catch (err: any) {
+          clearInterval(pollInterval);
+          setShowPaystackIframe(false);
+          setError(err.message || 'Failed to verify card authorization');
+          setLoading(false);
         }
-      }, 1000);
+      }, 3000);
 
       // Timeout after 5 minutes
       setTimeout(() => {
-        clearInterval(checkInterval);
-        if (paystackWindow && !paystackWindow.closed) {
-          paystackWindow.close();
-        }
+        clearInterval(pollInterval);
+        setShowPaystackIframe(false);
         setLoading(false);
+        setError('Card authorization timed out');
       }, 300000);
     } catch (err: any) {
       setError(err.message || 'Card authorization failed');
@@ -591,6 +716,29 @@ export default function CheckoutPage() {
   };
 
   // Render different steps
+  
+  // Show loading state while checking if customer exists
+  if (checkingCustomer) {
+    return (
+      <div className="h-screen flex flex-col bg-white">
+        <div className="bg-blue-600 text-white py-3 px-4 flex justify-between items-center flex-shrink-0">
+          <div className="font-bold text-lg">CRL Pay Checkout</div>
+          <button onClick={handleClose} className="text-white hover:text-gray-200">
+            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
+            <p className="text-gray-600">Checking customer information...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (step === 'customer-info') {
     return (
       <div className="h-screen flex flex-col bg-white">
@@ -1078,18 +1226,42 @@ export default function CheckoutPage() {
 
             <div className="bg-blue-50 border border-blue-200 rounded p-3 mb-4">
               <p className="text-xs text-blue-800">
-                Your card will be authorized for automatic payments. You can cancel anytime.
+                ₦100 will be charged to authorize your card for automatic payments. You can cancel anytime.
               </p>
             </div>
           </div>
         </div>
+
+        {/* Paystack Iframe Modal */}
+        {showPaystackIframe && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg w-full max-w-md h-[600px] flex flex-col">
+              <div className="flex justify-between items-center p-4 border-b">
+                <h3 className="font-semibold text-gray-900">Card Authorization</h3>
+                <button
+                  onClick={() => setShowPaystackIframe(false)}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              <iframe
+                src={paystackUrl}
+                className="flex-1 w-full border-0"
+                title="Paystack Payment"
+              />
+            </div>
+          </div>
+        )}
 
         {/* Sticky Footer Button */}
         <div className="flex-shrink-0 bg-white border-t border-gray-200 p-4">
           <div className="max-w-md mx-auto">
             <button
               onClick={handleCardAuthorization}
-              disabled={loading}
+              disabled={loading || showPaystackIframe}
               className="w-full bg-blue-600 text-white py-3 rounded font-medium disabled:bg-gray-400 flex items-center justify-center hover:bg-blue-700 transition-colors"
             >
               {loading ? (

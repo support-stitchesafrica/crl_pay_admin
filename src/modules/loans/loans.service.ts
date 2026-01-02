@@ -27,6 +27,11 @@ export class LoansService {
     merchantPenaltyRate: number,
   ): Promise<Loan> {
     try {
+      // Ensure merchantId is present
+      if (!createLoanDto.merchantId) {
+        throw new BadRequestException('Merchant ID is required');
+      }
+
       // Validate tenor and frequency combination
       const validation = this.loanCalculator.validateTenorFrequencyCombination(
         createLoanDto.tenor,
@@ -50,15 +55,21 @@ export class LoansService {
       const paymentSchedule = this.loanCalculator.generatePaymentSchedule(configuration);
 
       const loanId = uuidv4();
+      const loanAccountNumber = await this.generateLoanAccountNumber();
       const now = new Date();
+
+      // Convert to plain objects for Firestore (avoid class instances)
+      const plainConfiguration = JSON.parse(JSON.stringify(configuration));
+      const plainPaymentSchedule = JSON.parse(JSON.stringify(paymentSchedule));
 
       const loan: Loan = {
         loanId,
+        loanAccountNumber,
         merchantId: createLoanDto.merchantId,
         customerId: createLoanDto.customerId,
         principalAmount: createLoanDto.principalAmount,
-        configuration,
-        paymentSchedule,
+        configuration: plainConfiguration,
+        paymentSchedule: plainPaymentSchedule,
         status: 'pending', // Waiting for card authorization
         currentInstallment: 0,
         amountPaid: 0,
@@ -109,17 +120,38 @@ export class LoansService {
       firstPaymentDate,
     );
 
+    const plainUpdatedSchedule = JSON.parse(JSON.stringify(updatedSchedule));
+
     const updatedLoan: Partial<Loan> = {
       cardAuthorization,
       status: 'active',
       activatedAt: new Date(),
       firstPaymentDate,
-      paymentSchedule: updatedSchedule,
+      paymentSchedule: plainUpdatedSchedule,
       updatedAt: new Date(),
     };
 
     await this.loansCollection.doc(loanId).update(updatedLoan);
     this.logger.log(`Card authorized for loan: ${loanId}`);
+
+    // Also save card info to customer record for future use
+    try {
+      const customersCollection = this.firestore.collection('crl_customers');
+      await customersCollection.doc(loan.customerId).update({
+        paystackAuthorizationCode: cardAuth.authorizationCode,
+        paystackCustomerCode: cardAuth.paystackCustomerCode,
+        cardType: cardAuth.cardType,
+        cardLast4: cardAuth.last4,
+        cardExpiryMonth: cardAuth.expiryMonth,
+        cardExpiryYear: cardAuth.expiryYear,
+        cardBank: cardAuth.bank,
+        cardAuthorizedAt: new Date(),
+        updatedAt: new Date(),
+      });
+      this.logger.log(`Card info saved to customer: ${loan.customerId}`);
+    } catch (error) {
+      this.logger.error(`Failed to save card info to customer: ${error.message}`);
+    }
 
     return { ...loan, ...updatedLoan } as Loan;
   }
@@ -321,5 +353,45 @@ export class LoansService {
       totalCollected: loans.reduce((sum, l) => sum + l.amountPaid, 0),
       totalOutstanding: loans.reduce((sum, l) => sum + l.amountRemaining, 0),
     };
+  }
+
+  /**
+   * Generate a unique human-readable 10-digit alphanumeric loan account number
+   */
+  private async generateLoanAccountNumber(): Promise<string> {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Removed confusing characters (0, O, 1, I)
+    let accountNumber = '';
+    let isUnique = false;
+    let attempts = 0;
+    const maxAttempts = 10;
+    
+    while (!isUnique && attempts < maxAttempts) {
+      accountNumber = '';
+      
+      // Generate 10 random characters
+      for (let i = 0; i < 10; i++) {
+        const randomIndex = Math.floor(Math.random() * chars.length);
+        accountNumber += chars[randomIndex];
+      }
+      
+      // Check if this account number already exists
+      const existingLoan = await this.loansCollection
+        .where('loanAccountNumber', '==', accountNumber)
+        .limit(1)
+        .get();
+      
+      if (existingLoan.empty) {
+        isUnique = true;
+      } else {
+        attempts++;
+        this.logger.warn(`Duplicate loan account number generated: ${accountNumber}, retrying... (attempt ${attempts})`);
+      }
+    }
+    
+    if (!isUnique) {
+      throw new Error('Failed to generate unique loan account number after multiple attempts');
+    }
+    
+    return accountNumber;
   }
 }

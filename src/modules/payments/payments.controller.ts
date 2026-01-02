@@ -8,6 +8,7 @@ import {
   HttpCode,
   HttpStatus,
   UseGuards,
+  Req,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse as ApiResponseDecorator, ApiBearerAuth } from '@nestjs/swagger';
 import { PaymentsService } from './payments.service';
@@ -33,9 +34,11 @@ export class PaymentsController {
   @ApiResponseDecorator({ status: 400, description: 'Bad request' })
   @ApiResponseDecorator({ status: 401, description: 'Unauthorized - Invalid API key' })
   async initializeAuthorization(
-    @Body() body: { email: string; amount: number; merchantId: string; customerId: string; metadata?: any },
+    @Req() request: any,
+    @Body() body: { email: string; amount: number; customerId: string; metadata?: any },
   ) {
     try {
+      const merchantId = request.merchant?.merchantId;
       const reference = `AUTH_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
       const authorizationUrl = await this.paystackService.generatePaymentLink({
@@ -44,7 +47,7 @@ export class PaymentsController {
         reference,
         metadata: {
           customerId: body.customerId,
-          merchantId: body.merchantId,
+          merchantId,
           purpose: 'card_authorization',
           ...body.metadata,
         },

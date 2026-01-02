@@ -25,6 +25,16 @@ export interface Customer {
   status: 'active' | 'suspended' | 'blacklisted';
   blacklistReason?: string;
 
+  // Payment Information
+  paystackAuthorizationCode?: string;
+  paystackCustomerCode?: string;
+  cardType?: string;
+  cardLast4?: string;
+  cardExpiryMonth?: string;
+  cardExpiryYear?: string;
+  cardBank?: string;
+  cardAuthorizedAt?: Date;
+
   // Metadata
   deviceFingerprint?: string;
   ipAddress?: string;
