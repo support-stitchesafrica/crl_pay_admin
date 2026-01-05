@@ -6,7 +6,7 @@ import { FinancingPlan, CreatePlanData, UpdatePlanData } from './types';
  */
 export const getPlans = async (): Promise<FinancingPlan[]> => {
   const response = await api.get('/financiers/me/plans');
-  return response.data;
+  return response.data.data || response.data;
 };
 
 /**
@@ -14,7 +14,7 @@ export const getPlans = async (): Promise<FinancingPlan[]> => {
  */
 export const getPlanById = async (planId: string): Promise<FinancingPlan> => {
   const response = await api.get(`/financiers/me/plans/${planId}`);
-  return response.data;
+  return response.data.data || response.data;
 };
 
 /**

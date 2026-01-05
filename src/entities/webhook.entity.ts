@@ -10,7 +10,9 @@ export type WebhookEvent =
   | 'payment.overdue'
   | 'customer.created'
   | 'credit.approved'
-  | 'credit.declined';
+  | 'credit.declined'
+  | 'CRLPAY_DISBURSEMENT_SUCCESS'
+  | 'CRLPAY_DISBURSEMENT_FAILED';
 
 export type WebhookDeliveryStatus = 'pending' | 'success' | 'failed';
 
@@ -95,4 +97,6 @@ export const ALL_WEBHOOK_EVENTS: WebhookEvent[] = [
   'customer.created',
   'credit.approved',
   'credit.declined',
+  'CRLPAY_DISBURSEMENT_SUCCESS',
+  'CRLPAY_DISBURSEMENT_FAILED',
 ];

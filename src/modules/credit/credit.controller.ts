@@ -6,6 +6,7 @@ import {
   Param,
   UseGuards,
   Logger,
+  Req,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -39,9 +40,19 @@ export class CreditController {
   @ApiResponseDecorator({ status: 400, description: 'Invalid input data' })
   @ApiResponseDecorator({ status: 401, description: 'Unauthorized - Invalid API key' })
   @ApiResponseDecorator({ status: 404, description: 'Customer not found' })
-  async assessCredit(@Body() assessCreditDto: AssessCreditDto) {
-    this.logger.log(`POST /credit/assess - Assessing credit for customer: ${assessCreditDto.customerId}`);
-    const assessment = await this.creditService.assessCredit(assessCreditDto);
+  async assessCredit(@Req() request: any, @Body() assessCreditDto: AssessCreditDto) {
+    const merchantId = request.merchant?.merchantId;
+    
+    if (!merchantId) {
+      throw new Error('Merchant ID not found in authenticated request');
+    }
+    
+    this.logger.log(`POST /credit/assess - Merchant: ${merchantId}, Customer: ${assessCreditDto.customerId}`);
+    
+    // Add merchantId from authenticated merchant
+    const dtoWithMerchant: AssessCreditDto = { ...assessCreditDto, merchantId };
+    
+    const assessment = await this.creditService.assessCredit(dtoWithMerchant);
     this.logger.log(`Assessment completed: ${assessment.decision} | Score: ${assessment.totalScore}`);
     return ApiResponse.success(
       assessment,

@@ -50,17 +50,17 @@ export interface FinancingPlan {
 
 export const getMappedPlans = async (): Promise<PlanMerchantMapping[]> => {
   const response = await api.get('/plan-merchant-mappings');
-  return response.data;
+  return response.data.data || response.data;
 };
 
 export const getPlanDetails = async (planId: string): Promise<FinancingPlan> => {
   const response = await api.get(`/financing-plans/${planId}`);
-  return response.data;
+  return response.data.data || response.data;
 };
 
 export const getMultiplePlanDetails = async (planIds: string[]): Promise<FinancingPlan[]> => {
   const responses = await Promise.all(
     planIds.map((id) => api.get(`/financing-plans/${id}`).catch(() => null))
   );
-  return responses.filter((r) => r !== null).map((r) => r!.data);
+  return responses.filter((r) => r !== null).map((r) => r!.data.data || r!.data);
 };

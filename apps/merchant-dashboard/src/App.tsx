@@ -14,6 +14,8 @@ import Loans from './pages/Loans';
 import LoanDetail from './pages/LoanDetail';
 import Analytics from './pages/Analytics';
 import Settings from './pages/Settings';
+import CustomerLookup from './pages/CustomerLookup';
+import LoanLiquidation from './pages/LoanLiquidation';
 
 const queryClient = new QueryClient();
 
@@ -72,6 +74,22 @@ function App() {
               element={
                 <ProtectedRoute>
                   <LoanDetail />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/loans/:id/liquidate"
+              element={
+                <ProtectedRoute>
+                  <LoanLiquidation />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/customer-lookup"
+              element={
+                <ProtectedRoute>
+                  <CustomerLookup />
                 </ProtectedRoute>
               }
             />

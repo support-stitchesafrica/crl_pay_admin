@@ -58,6 +58,7 @@ export interface CardAuthorization {
 
 export interface Loan {
   loanId: string;
+  loanAccountNumber: string; // Human-readable 10-digit alphanumeric account number
   merchantId: string;
   customerId: string;
 

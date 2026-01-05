@@ -15,6 +15,7 @@ import FinancingPlans from './pages/FinancingPlans';
 import PlanMerchantMapping from './pages/PlanMerchantMapping';
 import Settings from './pages/Settings';
 import Analytics from './pages/Analytics';
+import Integrations from './pages/Integrations';
 
 const queryClient = new QueryClient();
 
@@ -80,6 +81,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <Settings />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/integrations"
+              element={
+                <ProtectedRoute>
+                  <Integrations />
                 </ProtectedRoute>
               }
             />

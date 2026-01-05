@@ -169,6 +169,14 @@ export default function LoanDetail() {
               {statusBadge.icon}
               {loan.status.charAt(0).toUpperCase() + loan.status.slice(1)}
             </span>
+            {loan.status === 'active' && loan.amountRemaining > 0 && (
+              <button
+                onClick={() => navigate(`/loans/${loan.loanId}/liquidate`)}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+              >
+                Liquidate Loan
+              </button>
+            )}
             {loan.status === 'pending' && (
               <button
                 onClick={handleCancelLoan}

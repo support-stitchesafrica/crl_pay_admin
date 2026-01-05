@@ -2,6 +2,14 @@
 
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
+import {
+  checkoutService,
+  customerService,
+  creditService,
+  plansService,
+  loanService,
+  paymentService,
+} from '../../services';
 
 type CheckoutStep = 'customer-info' | 'plan-selection' | 'credit-check' | 'card-authorization' | 'success';
 
@@ -15,6 +23,11 @@ interface CustomerData {
   address: string;
   city: string;
   state: string;
+  hasSavedCard?: boolean;
+  savedAuthorizationCode?: string;
+  cardType?: string;
+  cardLast4?: string;
+  cardBank?: string;
 }
 
 interface FinancingPlan {
@@ -99,6 +112,11 @@ export default function CheckoutPage() {
   const [customerId, setCustomerId] = useState<string>('');
   const [creditScore, setCreditScore] = useState<number>(0);
   const [countdown, setCountdown] = useState(5);
+  const [checkingCustomer, setCheckingCustomer] = useState(true);
+  const [paystackUrl, setPaystackUrl] = useState<string>('');
+  const [showPaystackIframe, setShowPaystackIframe] = useState(false);
+  const [reservationId, setReservationId] = useState<string>('');
+  const [reservationExpiry, setReservationExpiry] = useState<Date | null>(null);
 
   useEffect(() => {
     // Send message to parent that webview is ready
@@ -107,6 +125,8 @@ export default function CheckoutPage() {
     // Check if customer exists with the provided email
     if (customerEmail) {
       checkExistingCustomer(customerEmail);
+    } else {
+      setCheckingCustomer(false);
     }
   }, []);
 
@@ -151,20 +171,11 @@ export default function CheckoutPage() {
   });
 
   const checkExistingCustomer = async (email: string) => {
+    setCheckingCustomer(true);
     try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3006'}/api/v1/customers/by-email/${email}`,
-        {
-          headers: {
-            'X-API-Key': apiKey,
-          },
-        }
-      );
+      const customer = await customerService.getByEmail(email, apiKey);
 
-      if (response.ok) {
-        const result = await response.json();
-        const customer = result.data;
-
+      if (customer) {
         // Customer exists - skip form and go to credit check
         setCustomerId(customer.customerId);
         setCustomerData({
@@ -181,64 +192,75 @@ export default function CheckoutPage() {
 
         // Proceed directly to credit check
         await performCreditAssessment(customer.customerId);
+      } else {
+        // Customer doesn't exist - show registration form
+        setCheckingCustomer(false);
       }
     } catch (err) {
       // Customer doesn't exist - show registration form
       console.log('New customer - showing registration form');
+      setCheckingCustomer(false);
     }
   };
 
   const performCreditAssessment = async (userId: string) => {
+    setCheckingCustomer(false);
     setLoading(true);
     setError(null);
     setStep('credit-check');
 
     try {
-      // Call credit assessment API
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3006'}/api/v1/credit/assess`,
-        {
-          method: 'POST',
-          headers: getHeaders(),
-          body: JSON.stringify({
-            customerId: userId,
-            merchantId,
-            requestedAmount: amount,
-          }),
-        }
-      );
+      // Call credit assessment API using service
+      const creditData = await creditService.assessCredit({
+        customerId: userId,
+        merchantId,
+        requestedAmount: amount,
+        apiKey,
+      });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Credit assessment failed');
-      }
-
-      const result = await response.json();
-      const creditData = result.data;
-
-      // Store credit score
       setCreditScore(creditData.totalScore || 0);
 
-      // Check if approved (instant_approval, conditional_approval, or manual_review are considered approved)
       const isApproved = ['instant_approval', 'conditional_approval', 'manual_review'].includes(creditData.decision);
       
       if (isApproved) {
         sendMessageToParent('credit_approved', creditData);
 
-        // Fetch real financing plans mapped to this merchant
-        await fetchMappedPlans();
+        // Check eligibility with race-safe allocation check
+        await checkEligibilityAndPlans();
+        
+        // Check if customer has saved card
+        try {
+          const customer = await customerService.getById(userId, apiKey);
+          
+          // Check for paystackAuthorizationCode field
+          if (customer?.paystackAuthorizationCode) {
+            console.log('Customer has saved card:', customer.cardLast4);
+            setCustomerData(prev => ({
+              ...prev,
+              hasSavedCard: true,
+              savedAuthorizationCode: customer.paystackAuthorizationCode,
+              cardType: customer.cardType,
+              cardLast4: customer.cardLast4,
+              cardBank: customer.cardBank,
+            }));
+          } else {
+            console.log('No saved card found for customer');
+          }
+        } catch (err) {
+          console.log('Could not check for saved card:', err);
+        }
+        
         setStep('plan-selection');
       } else {
-        // Credit declined
-        const declineReason = creditData.decisionReasons?.join('. ') || 'Your credit application was not approved at this time.';
+        const declineReason = creditData.reason || 'Your credit application was not approved at this time.';
         setError(declineReason);
         sendMessageToParent('credit_denied', creditData);
-        setStep('customer-info'); // Go back to show error
+        setStep('customer-info');
       }
     } catch (err: any) {
       setError(err.message || 'Credit assessment failed');
       sendMessageToParent('error', { message: err.message });
-      setStep('customer-info'); // Go back to show error
+      setStep('customer-info');
     } finally {
       setLoading(false);
     }
@@ -253,32 +275,17 @@ export default function CheckoutPage() {
     setError(null);
 
     try {
-      // Step 1: Register customer
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3006'}/api/v1/customers`,
-        {
-          method: 'POST',
-          headers: getHeaders(),
-          body: JSON.stringify({
-            ...customerData,
-            merchantId,
-          }),
-        }
-      );
+      // Register customer using service
+      const customer = await customerService.create({
+        merchantId,
+        ...customerData,
+      }, apiKey);
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to register customer');
-      }
+      setCustomerId(customer.customerId);
+      sendMessageToParent('customer_registered', customer);
 
-      const result = await response.json();
-      const newCustomerId = result.data.customerId;
-
-      setCustomerId(newCustomerId);
-      sendMessageToParent('customer_registered', result.data);
-
-      // Step 2: Perform credit assessment
-      await performCreditAssessment(newCustomerId);
+      // Perform credit assessment
+      await performCreditAssessment(customer.customerId);
     } catch (err: any) {
       setError(err.message || 'Failed to register customer');
       sendMessageToParent('error', { message: err.message });
@@ -286,93 +293,89 @@ export default function CheckoutPage() {
     }
   };
 
-  const fetchMappedPlans = async () => {
+  const checkEligibilityAndPlans = async () => {
     try {
       setLoading(true);
       
-      // Fetch plan-merchant mappings for this merchant
-      const mappingsResponse = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3006'}/api/v1/plan-merchant-mappings?merchantId=${merchantId}`,
-        {
-          headers: getHeaders(),
-        }
-      );
+      // Use race-safe eligibility check
+      const eligibility = await checkoutService.checkEligibility({
+        merchantId,
+        amount,
+        apiKey,
+        customerId: customerId || undefined,
+      });
 
-      if (!mappingsResponse.ok) {
-        throw new Error('Failed to fetch financing plans');
-      }
+      console.log('Eligibility response:', eligibility);
 
-      const mappingsResult = await mappingsResponse.json();
-      const mappings: PlanMerchantMapping[] = mappingsResult.data || [];
-
-      // Filter only active mappings
-      const activeMappings = mappings.filter(m => m.status === 'active');
-
-      if (activeMappings.length === 0) {
-        setError('No financing plans available for this merchant');
+      if (!eligibility.eligible) {
+        setError(eligibility.reason || 'No financing available');
         return;
       }
 
-      // Fetch plan details for each mapping
-      const planDetailsPromises = activeMappings.map(async (mapping) => {
-        const planResponse = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3006'}/api/v1/financing-plans/${mapping.planId}`,
-          {
-            headers: getHeaders(),
+      // Check if eligibleMappings exists and has items
+      const eligibleMappings = eligibility.eligibleMappings || [];
+      
+      if (eligibleMappings.length === 0) {
+        setError('No financing plans available');
+        return;
+      }
+
+      console.log('Eligible mappings:', eligibleMappings);
+
+      // Fetch full plan details for eligible plans
+      const paymentPlans: PaymentPlan[] = [];
+      
+      for (const eligibleMapping of eligibleMappings) {
+        const plan = await plansService.getPlanById(eligibleMapping.planId, apiKey);
+        const mappings = await plansService.getMerchantMappings(merchantId, apiKey);
+        const selectedMapping = mappings.find(m => m.mappingId === eligibleMapping.mappingId);
+        
+        if (selectedMapping) {
+          // Calculate payment details
+          let tenorInDays = plan.tenor.value;
+          if (plan.tenor.period === 'WEEKS') tenorInDays *= 7;
+          else if (plan.tenor.period === 'MONTHS') tenorInDays *= 30;
+          else if (plan.tenor.period === 'YEARS') tenorInDays *= 365;
+
+          const monthlyRate = plan.interestRate / 100;
+          const months = tenorInDays / 30;
+          const totalWithInterest = amount * (1 + (monthlyRate * months));
+
+          let frequency = 'monthly';
+          let numberOfInstallments = Math.ceil(months);
+          
+          if (tenorInDays <= 30) {
+            frequency = 'weekly';
+            numberOfInstallments = 4;
+          } else if (tenorInDays <= 60) {
+            frequency = 'bi-weekly';
+            numberOfInstallments = 4;
           }
-        );
-        const planResult = await planResponse.json();
-        return planResult.data as FinancingPlan;
-      });
 
-      const plans = await Promise.all(planDetailsPromises);
+          const installmentAmount = Math.ceil(totalWithInterest / numberOfInstallments);
 
-      // Calculate payment plans based on real financing plans
-      const paymentPlans: PaymentPlan[] = activeMappings.map((mapping, index) => {
-        const plan = plans[index];
-        
-        // Calculate tenor in days
-        let tenorInDays = plan.tenor.value;
-        if (plan.tenor.period === 'WEEKS') tenorInDays *= 7;
-        else if (plan.tenor.period === 'MONTHS') tenorInDays *= 30;
-        else if (plan.tenor.period === 'YEARS') tenorInDays *= 365;
-
-        // Calculate total with interest (monthly interest rate)
-        const monthlyRate = plan.interestRate / 100;
-        const months = tenorInDays / 30;
-        const totalWithInterest = amount * (1 + (monthlyRate * months));
-
-        // Determine installment frequency and count
-        let frequency = 'monthly';
-        let numberOfInstallments = Math.ceil(months);
-        
-        if (tenorInDays <= 30) {
-          frequency = 'weekly';
-          numberOfInstallments = 4;
-        } else if (tenorInDays <= 60) {
-          frequency = 'bi-weekly';
-          numberOfInstallments = 4;
+          paymentPlans.push({
+            mapping: selectedMapping,
+            plan,
+            installmentAmount,
+            numberOfInstallments,
+            totalAmount: Math.ceil(totalWithInterest),
+            frequency,
+          });
         }
-
-        const installmentAmount = Math.ceil(totalWithInterest / numberOfInstallments);
-
-        return {
-          mapping,
-          plan,
-          installmentAmount,
-          numberOfInstallments,
-          totalAmount: Math.ceil(totalWithInterest),
-          frequency,
-        };
-      });
+      }
 
       setAvailablePlans(paymentPlans);
     } catch (err: any) {
-      setError(err.message || 'Failed to load financing plans');
+      console.error('Eligibility check error:', err);
+      const errorMessage = err.message || 'Failed to load financing plans';
+      setError(errorMessage);
+      sendMessageToParent('error', { message: errorMessage });
     } finally {
       setLoading(false);
     }
   };
+
 
   const calculateRepaymentSchedule = (plan: PaymentPlan): RepaymentScheduleItem[] => {
     const schedule: RepaymentScheduleItem[] = [];
@@ -414,24 +417,72 @@ export default function CheckoutPage() {
   const handleConfirmPlan = async () => {
     if (!selectedPlan) return;
 
-    setLoading(true);
     setError(null);
     setShowSchedule(false);
+    
+    // Show loading during reservation (loading state will display over plan-selection)
+    setLoading(true);
 
     try {
-      // Step 2: Perform credit assessment
-      setStep('credit-check');
+      // STEP 1: Reserve allocation (race-safe)
+      const reservation = await checkoutService.reserveAllocation({
+        reference,
+        amount,
+        customerId,
+        apiKey,
+      });
 
-      // In production, call credit assessment API
-      // For now, simulate approval
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      setReservationId(reservation.reservationId);
+      setReservationExpiry(new Date(reservation.expiresAt));
 
-      // Step 3: Create loan
-      setStep('card-authorization');
-      sendMessageToParent('plan_selected', { plan: selectedPlan, schedule: repaymentSchedule });
+      // STEP 2: Initiate disbursement
+      if (customerData.hasSavedCard && customerData.savedAuthorizationCode) {
+        // Customer has saved card - initiate disbursement directly
+        setStep('credit-check'); // Now change step for disbursement
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
+        // Initiate disbursement using service
+        const disbursement = await checkoutService.initiateDisbursement({
+          reference,
+          reservationId: reservation.reservationId,
+          customerId,
+          apiKey,
+        });
+
+        if (!disbursement || !disbursement.loanId) {
+          throw new Error('Disbursement failed - no loan created');
+        }
+
+        // Show success
+        setStep('success');
+        sendMessageToParent('success', {
+          loanId: disbursement.loanId,
+          loanAccountNumber: disbursement.loanAccountNumber,
+          customerId,
+          amount,
+          plan: selectedPlan,
+          repaymentSchedule,
+          authorizationCode: customerData.savedAuthorizationCode,
+          reference,
+          disbursementReference: disbursement.disbursementReference,
+          customer: customerData,
+          creditScore,
+        });
+
+        setTimeout(() => {
+          handleClose();
+        }, 5000);
+      } else {
+        // No saved card - proceed to card authorization
+        setStep('card-authorization');
+        sendMessageToParent('plan_selected', { plan: selectedPlan, schedule: repaymentSchedule });
+      }
     } catch (err: any) {
-      setError(err.message || 'Credit assessment failed');
-      sendMessageToParent('error', { message: err.message });
+      console.error('Confirm plan error:', err);
+      const errorMessage = err.message || 'Failed to process payment';
+      setError(errorMessage);
+      setStep('plan-selection'); // Go back to plan selection to show error
+      sendMessageToParent('error', { message: errorMessage });
     } finally {
       setLoading(false);
     }
@@ -442,146 +493,82 @@ export default function CheckoutPage() {
     setError(null);
 
     try {
-      // Step 1: Initialize Paystack transaction for card authorization
-      const initResponse = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3006'}/api/v1/payments/initialize-authorization`,
-        {
-          method: 'POST',
-          headers: getHeaders(),
-          body: JSON.stringify({
-            email: customerData.email,
-            amount: selectedPlan?.installmentAmount || 10000, // Amount for auth (₦100 minimum)
-            merchantId,
-            customerId,
-          }),
-        }
-      );
-
-      if (!initResponse.ok) {
-        throw new Error('Failed to initialize payment');
-      }
-
-      const initData = await initResponse.json();
-      const authorizationUrl = initData.data?.authorization_url;
-
-      if (!authorizationUrl) {
-        throw new Error('No authorization URL received');
-      }
-
-      // Send message to parent to open Paystack
-      sendMessageToParent('card_authorization_required', {
-        url: authorizationUrl,
-        reference: initData.data?.reference,
+      // Step 1: Initialize Paystack transaction using service
+      const initData = await paymentService.initializeAuthorization({
+        email: customerData.email,
+        amount: 100, // ₦100 for card authorization only
+        apiKey,
       });
 
-      // Open Paystack in a new window/popup
-      const paystackWindow = window.open(authorizationUrl, 'paystack', 'width=500,height=700');
+      // Load Paystack in iframe
+      setPaystackUrl(initData.authorization_url);
+      setShowPaystackIframe(true);
+      setLoading(false);
 
-      // Poll for completion
-      const checkInterval = setInterval(async () => {
-        if (paystackWindow?.closed) {
-          clearInterval(checkInterval);
-          // Verify the transaction
-          try {
-            const verifyResponse = await fetch(
-              `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3006'}/api/v1/payments/verify/${initData.data?.reference}`
-            );
+      // Poll for payment verification
+      const verifyReference = initData.reference;
+      const pollInterval = setInterval(async () => {
+        try {
+          const verifyData = await paymentService.verifyPayment(verifyReference, apiKey);
+          
+          if (verifyData.status === 'success') {
+            clearInterval(pollInterval);
+            setShowPaystackIframe(false);
+            setLoading(true);
 
-            if (verifyResponse.ok) {
-              const verifyData = await verifyResponse.json();
-              if (verifyData.data?.status === 'success') {
-                const authorizationCode = verifyData.data?.authorization?.authorization_code;
+            const authorizationCode = verifyData.authorization?.authorization_code;
 
-                // Step 2: Create loan record
-                const loanResponse = await fetch(
-                  `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3006'}/api/v1/loans/create`,
-                  {
-                    method: 'POST',
-                    headers: {
-                      'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                      customerId,
-                      merchantId,
-                      amount,
-                      plan: selectedPlan,
-                      repaymentSchedule,
-                      authorizationCode,
-                      reference,
-                    }),
-                  }
-                );
-
-                if (!loanResponse.ok) {
-                  throw new Error('Failed to create loan record');
-                }
-
-                const loanData = await loanResponse.json();
-                const loanId = loanData.data?.loanId;
-
-                // Step 3: Disburse funds to merchant
-                const disbursementResponse = await fetch(
-                  `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3006'}/api/v1/disbursements/process`,
-                  {
-                    method: 'POST',
-                    headers: {
-                      'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                      loanId,
-                      merchantId,
-                      amount,
-                    }),
-                  }
-                );
-
-                if (!disbursementResponse.ok) {
-                  throw new Error('Failed to disburse funds');
-                }
-
-                const disbursementData = await disbursementResponse.json();
-
-                // Step 4: Show success and prepare to close
-                setStep('success');
-
-                // Send comprehensive success callback
-                sendMessageToParent('success', {
-                  loanId,
-                  customerId,
-                  merchantId,
-                  amount,
-                  plan: selectedPlan,
-                  repaymentSchedule,
-                  authorizationCode,
-                  reference,
-                  disbursement: disbursementData.data,
-                  customer: customerData,
-                  creditScore,
-                });
-
-                // Auto-close after 5 seconds
-                setTimeout(() => {
-                  handleClose();
-                }, 5000);
-              } else {
-                throw new Error('Card authorization failed');
-              }
+            if (!authorizationCode) {
+              throw new Error('No authorization code received');
             }
-          } catch (err: any) {
-            setError(err.message || 'Failed to verify card authorization');
-          } finally {
+
+            // Step 2: Initiate disbursement using service
+            const disbursement = await checkoutService.initiateDisbursement({
+              reference,
+              reservationId,
+              customerId,
+              apiKey,
+            });
+
+            if (!disbursement || !disbursement.loanId) {
+              throw new Error('Disbursement failed - no loan created');
+            }
+
+            // Step 3: Show success
+            setStep('success');
+
+            sendMessageToParent('success', {
+              loanId: disbursement.loanId,
+              loanAccountNumber: disbursement.loanAccountNumber,
+              customerId,
+              amount,
+              plan: selectedPlan,
+              repaymentSchedule,
+              authorizationCode,
+              reference,
+              disbursementReference: disbursement.disbursementReference,
+              customer: customerData,
+              creditScore,
+            });
+
             setLoading(false);
+
+            setTimeout(() => {
+              handleClose();
+            }, 5000);
           }
+        } catch (err: any) {
+          // Continue polling on error
+          console.log('Polling error:', err.message);
         }
-      }, 1000);
+      }, 3000);
 
       // Timeout after 5 minutes
       setTimeout(() => {
-        clearInterval(checkInterval);
-        if (paystackWindow && !paystackWindow.closed) {
-          paystackWindow.close();
-        }
+        clearInterval(pollInterval);
+        setShowPaystackIframe(false);
         setLoading(false);
+        setError('Card authorization timed out');
       }, 300000);
     } catch (err: any) {
       setError(err.message || 'Card authorization failed');
@@ -591,6 +578,29 @@ export default function CheckoutPage() {
   };
 
   // Render different steps
+  
+  // Show loading state while checking if customer exists
+  if (checkingCustomer) {
+    return (
+      <div className="h-screen flex flex-col bg-white">
+        <div className="bg-blue-600 text-white py-3 px-4 flex justify-between items-center flex-shrink-0">
+          <div className="font-bold text-lg">CRL Pay Checkout</div>
+          <button onClick={handleClose} className="text-white hover:text-gray-200">
+            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
+            <p className="text-gray-600">Checking customer information...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (step === 'customer-info') {
     return (
       <div className="h-screen flex flex-col bg-white">
@@ -999,6 +1009,38 @@ export default function CheckoutPage() {
     );
   }
 
+  // Show loading state (except during card authorization where we show iframe)
+  if (loading && step !== 'card-authorization' && !showPaystackIframe) {
+    const loadingMessages: Record<CheckoutStep, string> = {
+      'customer-info': 'Processing your information...',
+      'credit-check': 'Checking your eligibility...',
+      'plan-selection': 'Loading financing plans...',
+      'card-authorization': 'Processing...',
+      'success': 'Finalizing your loan...',
+    };
+    const loadingMessage = loadingMessages[step] || 'Processing...';
+
+    return (
+      <div className="h-screen flex flex-col bg-white">
+        <div className="bg-blue-600 text-white py-3 px-4 flex justify-between items-center flex-shrink-0">
+          <div className="font-bold text-lg">CRL Pay Checkout</div>
+          <button onClick={handleClose} className="text-white hover:text-gray-200">
+            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <div className="inline-block animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600 mb-4"></div>
+            <p className="text-xl font-semibold text-gray-800 mb-2">Please wait...</p>
+            <p className="text-gray-600">{loadingMessage}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (step === 'credit-check') {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center p-4">
@@ -1078,18 +1120,42 @@ export default function CheckoutPage() {
 
             <div className="bg-blue-50 border border-blue-200 rounded p-3 mb-4">
               <p className="text-xs text-blue-800">
-                Your card will be authorized for automatic payments. You can cancel anytime.
+                ₦100 will be charged to authorize your card for automatic payments. You can cancel anytime.
               </p>
             </div>
           </div>
         </div>
+
+        {/* Paystack Iframe Modal */}
+        {showPaystackIframe && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg w-full max-w-md h-[600px] flex flex-col">
+              <div className="flex justify-between items-center p-4 border-b">
+                <h3 className="font-semibold text-gray-900">Card Authorization</h3>
+                <button
+                  onClick={() => setShowPaystackIframe(false)}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              <iframe
+                src={paystackUrl}
+                className="flex-1 w-full border-0"
+                title="Paystack Payment"
+              />
+            </div>
+          </div>
+        )}
 
         {/* Sticky Footer Button */}
         <div className="flex-shrink-0 bg-white border-t border-gray-200 p-4">
           <div className="max-w-md mx-auto">
             <button
               onClick={handleCardAuthorization}
-              disabled={loading}
+              disabled={loading || showPaystackIframe}
               className="w-full bg-blue-600 text-white py-3 rounded font-medium disabled:bg-gray-400 flex items-center justify-center hover:bg-blue-700 transition-colors"
             >
               {loading ? (

@@ -190,10 +190,6 @@
                 <span class="value">Stitches Africa</span>
             </div>
             <div class="info-row">
-                <span class="label">ID:</span>
-                <span class="value">mzPmbALb7FOktvhn8Frh</span>
-            </div>
-            <div class="info-row">
                 <span class="label">Status:</span>
                 <span class="value" style="color: #4caf50;">✓ Approved</span>
             </div>
@@ -232,13 +228,11 @@
             description: 'Elegant evening dress made from premium fabric'
         };
 
-        // Real merchant ID and API keys from Firestore
-        const merchantId = 'mzPmbALb7FOktvhn8Frh';
+        // Real API key from Firestore
         const publicKey = 'pk_1b689d60c35a36c014b0809437bf55b8c063ca25d893a8c8';
 
-        // Initialize CRL Pay with merchant ID and public key
+        // Initialize CRL Pay with public key only
         const crlpay = new CRLPay({
-            merchantId: merchantId,
             publicKey: publicKey,
             mode: 'iframe' // or 'popup'
         });
@@ -246,7 +240,6 @@
         // Buy Now button handler
         document.getElementById('buyNowBtn').addEventListener('click', function() {
             crlpay.checkout({
-                merchantId: merchantId,
                 amount: product.price,
                 email: 'customer@example.com',
                 reference: 'STI_' + Date.now(),

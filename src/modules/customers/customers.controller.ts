@@ -166,12 +166,11 @@ export class CustomersController {
   }
 
   @Get(':id')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get customer by ID' })
+  @UseGuards(ApiKeyGuard)
+  @ApiOperation({ summary: 'Get customer by ID (requires API key)' })
   @ApiParam({ name: 'id', description: 'Customer ID' })
   @ApiResponseDecorator({ status: 200, description: 'Customer retrieved successfully' })
-  @ApiResponseDecorator({ status: 401, description: 'Unauthorized' })
+  @ApiResponseDecorator({ status: 401, description: 'Unauthorized - Invalid API key' })
   @ApiResponseDecorator({ status: 404, description: 'Customer not found' })
   async findOne(@Param('id') id: string) {
     this.logger.log(`GET /customers/${id} - Fetching customer`);

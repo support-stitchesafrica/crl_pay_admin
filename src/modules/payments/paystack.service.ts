@@ -99,11 +99,107 @@ export interface VerifyTransactionResponse {
   };
 }
 
+export interface CreateTransferRecipientParams {
+  type: 'nuban';
+  name: string;
+  account_number: string;
+  bank_code: string;
+  currency: 'NGN';
+}
+
+export interface CreateTransferRecipientResponse {
+  status: boolean;
+  message: string;
+  data: {
+    active: boolean;
+    createdAt: string;
+    currency: string;
+    domain: string;
+    id: number;
+    integration: number;
+    name: string;
+    recipient_code: string;
+    type: string;
+    updatedAt: string;
+    is_deleted: boolean;
+    details: {
+      authorization_code: string | null;
+      account_number: string;
+      account_name: string | null;
+      bank_code: string;
+      bank_name: string;
+    };
+  };
+}
+
+export interface InitiateTransferParams {
+  source: 'balance';
+  amount: number;
+  recipient: string;
+  reference: string;
+  reason?: string;
+}
+
+export interface InitiateTransferResponse {
+  status: boolean;
+  message: string;
+  data: {
+    integration: number;
+    domain: string;
+    amount: number;
+    currency: string;
+    source: string;
+    reason: string;
+    recipient: number;
+    status: string;
+    transfer_code: string;
+    id: number;
+    createdAt: string;
+    updatedAt: string;
+  };
+}
+
+export interface VerifyTransferResponse {
+  status: boolean;
+  message: string;
+  data: {
+    integration: number;
+    recipient: {
+      domain: string;
+      type: string;
+      currency: string;
+      name: string;
+      details: {
+        account_number: string;
+        account_name: string | null;
+        bank_code: string;
+        bank_name: string;
+      };
+      recipient_code: string;
+    };
+    domain: string;
+    amount: number;
+    currency: string;
+    source: string;
+    source_details: any;
+    reason: string;
+    status: string;
+    failures: any;
+    transfer_code: string;
+    id: number;
+    createdAt: string;
+    updatedAt: string;
+    titan_code: string | null;
+    transferred_at: string | null;
+    reference: string;
+  };
+}
+
 @Injectable()
 export class PaystackService {
   private readonly logger = new Logger(PaystackService.name);
-  private readonly axiosInstance: AxiosInstance;
-  private readonly secretKey: string;
+  private axiosInstance: AxiosInstance;
+  private secretKey: string;
 
   constructor() {
     this.secretKey = process.env.PAYSTACK_SECRET_KEY || '';
@@ -120,6 +216,23 @@ export class PaystackService {
       },
       timeout: 30000, // 30 seconds
     });
+  }
+
+  /**
+   * Create a new instance with custom secret key (for multi-integration support)
+   */
+  static createWithSecretKey(secretKey: string): PaystackService {
+    const instance = new PaystackService();
+    instance.secretKey = secretKey;
+    instance.axiosInstance = axios.create({
+      baseURL: 'https://api.paystack.co',
+      headers: {
+        Authorization: `Bearer ${secretKey}`,
+        'Content-Type': 'application/json',
+      },
+      timeout: 30000,
+    });
+    return instance;
   }
 
   /**
@@ -251,6 +364,130 @@ export class PaystackService {
       if (error.response?.data) {
         throw new BadRequestException(
           error.response.data.message || 'Failed to generate payment link',
+        );
+      }
+
+      throw error;
+    }
+  }
+
+  /**
+   * Create transfer recipient
+   */
+  async createTransferRecipient(
+    params: CreateTransferRecipientParams,
+  ): Promise<CreateTransferRecipientResponse> {
+    try {
+      this.logger.log(
+        `Creating transfer recipient: ${params.name} - ${params.account_number}`,
+      );
+
+      const response = await this.axiosInstance.post<CreateTransferRecipientResponse>(
+        '/transferrecipient',
+        params,
+      );
+
+      if (!response.data.status) {
+        throw new BadRequestException(
+          response.data.message || 'Failed to create transfer recipient',
+        );
+      }
+
+      this.logger.log(
+        `Transfer recipient created: ${response.data.data.recipient_code}`,
+      );
+
+      return response.data;
+    } catch (error: any) {
+      this.logger.error(
+        `Failed to create transfer recipient: ${error.message}`,
+        error.stack,
+      );
+
+      if (error.response?.data) {
+        throw new BadRequestException(
+          error.response.data.message || 'Failed to create transfer recipient',
+        );
+      }
+
+      throw error;
+    }
+  }
+
+  /**
+   * Initiate transfer (disbursement)
+   */
+  async initiateTransfer(
+    params: InitiateTransferParams,
+  ): Promise<InitiateTransferResponse> {
+    try {
+      this.logger.log(
+        `Initiating transfer: ${params.reference}, amount: ${params.amount / 100} NGN`,
+      );
+
+      const response = await this.axiosInstance.post<InitiateTransferResponse>(
+        '/transfer',
+        params,
+      );
+
+      if (!response.data.status) {
+        throw new BadRequestException(
+          response.data.message || 'Failed to initiate transfer',
+        );
+      }
+
+      this.logger.log(
+        `Transfer initiated: ${response.data.data.transfer_code}, status: ${response.data.data.status}`,
+      );
+
+      return response.data;
+    } catch (error: any) {
+      this.logger.error(
+        `Failed to initiate transfer: ${error.message}`,
+        error.stack,
+      );
+
+      if (error.response?.data) {
+        throw new BadRequestException(
+          error.response.data.message || 'Failed to initiate transfer',
+        );
+      }
+
+      throw error;
+    }
+  }
+
+  /**
+   * Verify transfer status
+   */
+  async verifyTransfer(reference: string): Promise<VerifyTransferResponse> {
+    try {
+      this.logger.log(`Verifying transfer: ${reference}`);
+
+      const response = await this.axiosInstance.get<VerifyTransferResponse>(
+        `/transfer/verify/${reference}`,
+      );
+
+      if (!response.data.status) {
+        throw new BadRequestException(
+          response.data.message || 'Transfer verification failed',
+        );
+      }
+
+      this.logger.log(
+        `Transfer verified: ${reference}, status: ${response.data.data.status}`,
+      );
+
+      return response.data;
+    } catch (error: any) {
+      this.logger.error(
+        `Failed to verify transfer: ${error.message}`,
+        error.stack,
+      );
+
+      if (error.response?.data) {
+        throw new BadRequestException(
+          error.response.data.message || 'Transfer verification failed',
         );
       }
 

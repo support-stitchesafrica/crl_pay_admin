@@ -1,4 +1,4 @@
-import { Injectable, Logger, NotFoundException, Inject } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, BadRequestException, Inject } from '@nestjs/common';
 import { Firestore } from '@google-cloud/firestore';
 import { CreditScoringService } from './credit-scoring.service';
 import { CustomersService } from '../customers/customers.service';
@@ -25,6 +25,11 @@ export class CreditService {
     this.logger.log(`Starting credit assessment for customer: ${assessCreditDto.customerId}`);
 
     try {
+      // Ensure merchantId is present
+      if (!assessCreditDto.merchantId) {
+        throw new BadRequestException('Merchant ID is required');
+      }
+
       // 1. Fetch customer data
       const customer = await this.customersService.findOne(assessCreditDto.customerId);
       if (!customer) {

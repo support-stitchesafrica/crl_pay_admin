@@ -229,6 +229,21 @@ export default function FinancingPlans() {
                             {getUtilizationPercentage(mapping.currentAllocation, mapping.fundsAllocated)}%
                           </p>
                         </div>
+                        {/* Progress Bar */}
+                        <div className="mt-2 w-full bg-gray-200 rounded-full h-2">
+                          <div
+                            className={`h-2 rounded-full transition-all ${
+                              getUtilizationPercentage(mapping.currentAllocation, mapping.fundsAllocated) >= 90
+                                ? 'bg-red-600'
+                                : getUtilizationPercentage(mapping.currentAllocation, mapping.fundsAllocated) >= 70
+                                ? 'bg-orange-600'
+                                : 'bg-green-600'
+                            }`}
+                            style={{
+                              width: `${Math.min(getUtilizationPercentage(mapping.currentAllocation, mapping.fundsAllocated), 100)}%`,
+                            }}
+                          />
+                        </div>
                       </div>
                     </div>
                   </>

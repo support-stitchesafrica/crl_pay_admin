@@ -368,6 +368,426 @@ Access URL: `https://cdn.crlpay.com/sdk/v1/crlpay-sdk.js`
 - **Time to Interactive**: < 1.5s
 - **Lighthouse Score**: 95+
 
+## Disbursement + Ledger Flow (Approach A)
+
+This section documents the complete BNPL transaction flow with:
+- **Allocation enforcement**: Never exceed `fundsAllocated - currentAllocation`
+- **Race-safe reservations**: Prevent concurrent checkouts from overspending
+- **Disbursement-first**: Loan created only after successful payout to merchant
+- **Immutable ledger**: All financial events recorded
+- **Merchant webhooks**: Notify merchant to fulfill order
+
+### Key Invariants
+
+1. **Allocation sufficiency**: Reject if `requestedAmount > (fundsAllocated - currentAllocation)`
+2. **Concurrency safety**: Use atomic Firestore transaction to reserve funds
+3. **Loan correctness**: Loan exists ⟺ disbursement succeeded
+4. **Fee handling**: CRL Pay pays transfer fees (merchant receives full principal)
+5. **Idempotency**: All operations keyed by `merchantId:reference`
+
+### Data Model
+
+#### Collections
+
+**`crl_transactions`** (immutable ledger)
+- `transactionId`, `type`, `status`, `idempotencyKey`
+- `merchantId`, `financierId`, `planId`, `mappingId`, `reference`, `loanId?`
+- `amount`, `currency`
+- `provider`, `integrationId`, `providerReference`
+- `createdAt`, `updatedAt`
+
+**`crl_reservations`**
+- `reservationId`, `idempotencyKey`
+- `merchantId`, `reference`, `mappingId`
+- `amount`, `status` (`active|consumed|released|expired`)
+- `expiresAt`, `createdAt`
+
+**`crl_disbursements`**
+- `disbursementId`, `idempotencyKey`
+- `merchantId`, `reference`, `reservationId`, `mappingId`
+- `amount`, `provider`, `integrationId`, `mode`
+- `providerRecipientCode`, `providerReference`
+- `status` (`initiated|success|failed`), `failureReason`
+- `feePaidByCrlpay`
+
+**`crl_payout_integrations`** + **`crl_repayment_integrations`**
+- `integrationId`, `provider`, `mode`, `label`, `status`
+- `secretKeyEnvRef` (alias to env variable, NOT the actual secret)
+- `createdAt`, `updatedAt`
+
+**`crl_system_settings/payout`** + **`crl_system_settings/repayments`**
+- `activeProvider`, `activeIntegrationId`, `mode`
+- `updatedAt`
+
+#### Transaction Types
+- `ALLOCATION_RESERVED`, `ALLOCATION_RELEASED`
+- `DISBURSEMENT_INITIATED`, `DISBURSEMENT_SUCCESS`, `DISBURSEMENT_FAILED`
+- `LOAN_CREATED`
+- `REPAYMENT_SUCCESS`, `TRANSFER_FEE`
+
+### Runtime Flow (Step-by-Step)
+
+#### Phase 0: Credit Approval + Card Authorization
+- Credit assessment happens first (existing flow)
+- Card authorization stores reusable token for **auto-debit repayments only**
+- Card authorization does NOT move BNPL funds
+
+#### Phase 1: Eligibility Pre-Check (Before Showing Plans)
+
+**Endpoint**: `GET /api/v1/checkout/eligibility?amount=X`
+
+**Logic**:
+1. Extract `merchantId` from `ApiKeyGuard`
+2. Validate merchant has `settlementAccount` configured
+3. Query active mappings where:
+   - `status === 'active'`
+   - `expirationDate > now`
+   - `remainingAllocation = fundsAllocated - currentAllocation >= amount`
+4. If no eligible mappings: return `eligible: false`
+5. Else: return `eligible: true` + list of eligible mappings
+
+**Webview**: Call this endpoint before rendering plan selection. If not eligible, show error and stop.
+
+#### Phase 2: Mapping Selection (Approach A)
+
+Backend automatically selects the **best eligible mapping**:
+- Choose mapping with **highest** `remainingAllocation`
+- Tie-breaker: earliest `expirationDate`
+
+#### Phase 3: Reserve Allocation (Atomic)
+
+**Endpoint**: `POST /api/v1/checkout/reserve`
+
+**Body**: `{ reference, amount }`
+
+**Logic** (Firestore transaction):
+```typescript
+const idempotencyKey = `RESERVE:${merchantId}:${reference}`;
+
+// Check for existing reservation
+const existing = await findReservationByIdempotencyKey(idempotencyKey);
+if (existing) return existing;
+
+// Re-read mapping
+const mapping = await mappingRef.get();
+const remaining = mapping.fundsAllocated - mapping.currentAllocation;
+
+if (remaining < amount) {
+  throw new BadRequestException('Insufficient allocation');
+}
+
+// Reserve funds
+await mappingRef.update({
+  currentAllocation: FieldValue.increment(amount)
+});
+
+// Create reservation
+const reservation = {
+  reservationId: uuid(),
+  idempotencyKey,
+  merchantId,
+  reference,
+  mappingId: mapping.mappingId,
+  amount,
+  status: 'active',
+  expiresAt: new Date(Date.now() + 15 * 60 * 1000), // 15 min
+  createdAt: new Date()
+};
+
+await reservationsCollection.doc(reservation.reservationId).set(reservation);
+
+// Write ledger
+await transactionsCollection.add({
+  type: 'ALLOCATION_RESERVED',
+  status: 'success',
+  idempotencyKey,
+  merchantId,
+  mappingId: mapping.mappingId,
+  reference,
+  amount,
+  ...
+});
+
+return reservation;
+```
+
+#### Phase 4: Initiate Disbursement
+
+**Endpoint**: `POST /api/v1/disbursements/initiate`
+
+**Body**: `{ reference, reservationId }`
+
+**Logic**:
+1. Validate reservation exists and is `active`
+2. Get merchant settlement account
+3. Get active payout integration from `crl_system_settings/payout`
+4. Load provider secret from env using `secretKeyEnvRef`
+5. Create/reuse Paystack transfer recipient
+6. Initiate Paystack transfer from CRL Pay balance
+7. Create disbursement record with `status: 'initiated'`
+8. Write ledger: `DISBURSEMENT_INITIATED`
+9. Return `{ disbursementId, status: 'initiated' }`
+
+#### Phase 5: Paystack Webhook Finalization
+
+**Endpoint**: `POST /api/v1/provider-webhooks/paystack`
+
+**On Transfer Success** (Firestore transaction):
+```typescript
+// 1. Mark disbursement success
+await disbursementRef.update({ status: 'success' });
+
+// 2. Create loan (with mappingId, planId, financierId as first-class fields)
+const loan = await loansService.create({
+  merchantId,
+  customerId,
+  principalAmount: amount,
+  mappingId,
+  planId,
+  financierId,
+  reference,
+  ...
+});
+
+// 3. Update aggregates
+await mappingRef.update({
+  totalDisbursed: FieldValue.increment(amount),
+  totalLoans: FieldValue.increment(1)
+});
+
+await merchantRef.update({
+  totalDisbursed: FieldValue.increment(amount)
+});
+
+await financierRef.update({
+  totalDisbursed: FieldValue.increment(amount)
+});
+
+// 4. Mark reservation consumed
+await reservationRef.update({ status: 'consumed' });
+
+// 5. Write ledger
+await transactionsCollection.add({
+  type: 'DISBURSEMENT_SUCCESS',
+  status: 'success',
+  loanId: loan.loanId,
+  ...
+});
+
+await transactionsCollection.add({
+  type: 'LOAN_CREATED',
+  status: 'success',
+  loanId: loan.loanId,
+  ...
+});
+
+// 6. Publish merchant webhook
+await webhookDeliveryService.publishEvent(
+  merchantId,
+  'CRLPAY_DISBURSEMENT_SUCCESS',
+  {
+    reference,
+    loanId: loan.loanId,
+    amount,
+    mappingId,
+    planId,
+    financierId,
+    providerReference: transfer.transfer_code
+  }
+);
+```
+
+**On Transfer Failure** (Firestore transaction):
+```typescript
+// 1. Mark disbursement failed
+await disbursementRef.update({ 
+  status: 'failed',
+  failureReason: error.message 
+});
+
+// 2. Release reservation
+await mappingRef.update({
+  currentAllocation: FieldValue.increment(-amount)
+});
+
+await reservationRef.update({ status: 'released' });
+
+// 3. Write ledger
+await transactionsCollection.add({
+  type: 'DISBURSEMENT_FAILED',
+  status: 'failed',
+  ...
+});
+
+await transactionsCollection.add({
+  type: 'ALLOCATION_RELEASED',
+  status: 'success',
+  ...
+});
+
+// 4. Optional: notify merchant of failure
+```
+
+#### Phase 6: Reservation Expiry (Cron Job)
+
+**Schedule**: Every 5 minutes
+
+**Logic**:
+```typescript
+const expiredReservations = await reservationsCollection
+  .where('status', '==', 'active')
+  .where('expiresAt', '<', new Date())
+  .get();
+
+for (const reservation of expiredReservations) {
+  // Release in transaction
+  await firestore.runTransaction(async (tx) => {
+    await mappingRef.update({
+      currentAllocation: FieldValue.increment(-reservation.amount)
+    });
+    
+    await reservationRef.update({ status: 'expired' });
+    
+    await transactionsCollection.add({
+      type: 'ALLOCATION_RELEASED',
+      status: 'success',
+      ...
+    });
+  });
+}
+```
+
+### Admin: Multi-Integration Setup
+
+#### Two Independent Selectors
+
+**Payout Integration** (for disbursements):
+- Paystack Transfers (now)
+- Flutterwave Transfers (later)
+- Stripe Payouts (later, requires Connect)
+
+**Repayment Integration** (for card tokenization + auto-debit):
+- Paystack (current)
+- Stripe (later)
+- Flutterwave (later)
+
+#### Backend Configuration
+
+**Environment Variables** (secrets never in Firestore):
+```bash
+PAYSTACK_SECRET_KEY_MAIN_LIVE=sk_live_...
+PAYSTACK_SECRET_KEY_TEST=sk_test_...
+STRIPE_SECRET_KEY_MAIN=sk_live_...
+```
+
+**Firestore Documents**:
+```typescript
+// crl_payout_integrations/paystack-main-live
+{
+  integrationId: 'paystack-main-live',
+  provider: 'paystack',
+  mode: 'live',
+  label: 'Paystack - Main NGN (Live)',
+  status: 'active',
+  secretKeyEnvRef: 'PAYSTACK_SECRET_KEY_MAIN_LIVE',
+  createdAt: ...
+}
+
+// crl_system_settings/payout
+{
+  settingsId: 'payout',
+  activeProvider: 'paystack',
+  activeIntegrationId: 'paystack-main-live',
+  mode: 'live',
+  updatedAt: ...
+}
+```
+
+#### Admin Endpoints
+
+**Integrations Management**:
+- `GET /api/v1/admin/integrations/payout` (list)
+- `POST /api/v1/admin/integrations/payout` (create)
+- `PUT /api/v1/admin/integrations/payout/:id` (update)
+- `DELETE /api/v1/admin/integrations/payout/:id` (delete)
+
+**System Settings**:
+- `GET /api/v1/admin/system-settings/payout` (get active)
+- `PUT /api/v1/admin/system-settings/payout` (set active integration)
+
+**Test Disbursement**:
+- `POST /api/v1/admin/disbursements/test` (trigger test transfer)
+
+#### Admin Dashboard UI
+
+**Settings → Payout Integration**:
+- Dropdown to select active integration
+- Table showing all integrations (provider, mode, status)
+- Button to add new integration
+- Button to test transfer to a merchant
+
+**Settings → Repayment Integration**:
+- Same UI pattern for card/repayment provider
+
+### Paystack Transfer Implementation
+
+Currently `PaystackService` only supports:
+- Card charge authorization
+- Transaction verification
+- Payment link generation
+
+**Need to add**:
+```typescript
+// Create transfer recipient
+async createTransferRecipient(params: {
+  type: 'nuban';
+  name: string;
+  account_number: string;
+  bank_code: string;
+  currency: 'NGN';
+}): Promise<{ recipient_code: string }>
+
+// Initiate transfer
+async initiateTransfer(params: {
+  source: 'balance';
+  amount: number; // kobo
+  recipient: string; // recipient_code
+  reference: string;
+  reason?: string;
+}): Promise<{ transfer_code: string; status: string }>
+
+// Verify transfer
+async verifyTransfer(reference: string): Promise<TransferStatus>
+
+// Verify webhook signature
+verifyWebhookSignature(rawBody: string, signature: string): boolean
+```
+
+### Testing Notes
+
+**Test Mode**:
+- Paystack test transfers don't behave like real bank transfers
+- Use for integration testing only
+
+**Live Mode**:
+- Fund your Paystack balance
+- Transfers appear in Paystack dashboard
+- Real bank settlement (seconds to minutes)
+- Track fees in ledger
+
+**Reconciliation**:
+- Ledger is source of truth
+- Cross-reference with Paystack dashboard
+- Admin can view all transactions in `crl_transactions`
+
+### Security Considerations
+
+1. **Secrets**: Never store in Firestore, only env refs
+2. **Webhook signatures**: Verify all provider webhooks
+3. **Idempotency**: Prevent duplicate disbursements/loans
+4. **Rate limiting**: Protect reservation endpoint
+5. **Audit trail**: Immutable ledger for compliance
+
 ## Next Steps
 
 ### Phase 1: Backend Integration (Priority: High)
