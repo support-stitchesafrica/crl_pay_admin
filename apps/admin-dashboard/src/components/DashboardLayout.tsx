@@ -14,6 +14,7 @@ import {
   User,
   Building2,
   Link as LinkIcon,
+  Plug,
 } from 'lucide-react';
 
 interface DashboardLayoutProps {
@@ -29,6 +30,7 @@ const menuItems = [
   { icon: User, label: 'Customers', path: '/customers' },
   { icon: FileText, label: 'Loans', path: '/loans' },
   { icon: BarChart3, label: 'Analytics', path: '/analytics' },
+  { icon: Plug, label: 'Integrations', path: '/integrations' },
   { icon: Settings, label: 'Settings', path: '/settings' },
 ];
 

@@ -14,6 +14,7 @@ import {
   X,
   Bell,
   User,
+  Search,
 } from 'lucide-react';
 
 interface DashboardLayoutProps {
@@ -25,6 +26,7 @@ const menuItems = [
   { icon: Wallet, label: 'Financing Plans', path: '/financing-plans' },
   { icon: Receipt, label: 'Transactions', path: '/transactions' },
   { icon: Users, label: 'Customers', path: '/customers' },
+  { icon: Search, label: 'Customer Lookup', path: '/customer-lookup' },
   { icon: CreditCard, label: 'Active Loans', path: '/loans' },
   { icon: BarChart3, label: 'Analytics', path: '/analytics' },
   { icon: Settings, label: 'Settings', path: '/settings' },

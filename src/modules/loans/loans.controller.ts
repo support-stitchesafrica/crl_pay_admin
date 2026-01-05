@@ -14,16 +14,22 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse as ApiResponseDecorator, ApiBearerAuth } from '@nestjs/swagger';
 import { LoansService } from './loans.service';
+import { LiquidationService } from './liquidation.service';
 import { CreateLoanDto } from './dto/create-loan.dto';
 import { UpdateLoanDto, AuthorizeCardDto, RecordPaymentDto } from './dto/update-loan.dto';
+import { CalculateLiquidationDto, LiquidateLoanDto } from './dto/liquidation.dto';
 import { ApiResponse } from '../../common/helpers/response.helper';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ApiKeyGuard } from '../auth/guards/api-key.guard';
+import { FlexibleAuthGuard } from '../auth/guards/flexible-auth.guard';
 
 @ApiTags('Loans')
 @Controller('loans')
 export class LoansController {
-  constructor(private readonly loansService: LoansService) {}
+  constructor(
+    private readonly loansService: LoansService,
+    private readonly liquidationService: LiquidationService,
+  ) {}
 
   @Post()
   @UseGuards(ApiKeyGuard)
@@ -225,6 +231,66 @@ export class LoansController {
     try {
       const loan = await this.loansService.cancel(id);
       return ApiResponse.success(loan, 'Loan cancelled successfully');
+    } catch (error) {
+      return ApiResponse.error(error.message, error);
+    }
+  }
+
+  @Get('customer/:email')
+  @UseGuards(FlexibleAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Get all loans for a customer by email (JWT or API Key)' })
+  @ApiResponseDecorator({ status: 200, description: 'Customer loans retrieved' })
+  @ApiResponseDecorator({ status: 401, description: 'Unauthorized - Provide JWT token or API key' })
+  async getCustomerLoans(@Req() request: any, @Param('email') email: string) {
+    try {
+      // Extract merchantId from either JWT (request.user) or API Key (request.merchant)
+      const merchantId = request.merchant?.merchantId || request.user?.merchantId;
+      const loans = await this.loansService.getCustomerLoansByEmail(merchantId, email);
+      return ApiResponse.success(loans, 'Customer loans retrieved');
+    } catch (error) {
+      return ApiResponse.error(error.message, error);
+    }
+  }
+
+  @Post('liquidation/calculate')
+  @UseGuards(FlexibleAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Calculate liquidation amount with prorated interest (JWT or API Key)' })
+  @ApiResponseDecorator({ status: 200, description: 'Liquidation calculated' })
+  @ApiResponseDecorator({ status: 400, description: 'Invalid request' })
+  @ApiResponseDecorator({ status: 401, description: 'Unauthorized - Provide JWT token or API key' })
+  async calculateLiquidation(@Body() dto: CalculateLiquidationDto) {
+    try {
+      const calculation = await this.liquidationService.calculateLiquidation(
+        dto.loanId,
+        dto.amount,
+      );
+      return ApiResponse.success(calculation, 'Liquidation calculated');
+    } catch (error) {
+      return ApiResponse.error(error.message, error);
+    }
+  }
+
+  @Post('liquidation/process')
+  @UseGuards(FlexibleAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Process loan liquidation (full or partial) (JWT or API Key)' })
+  @ApiResponseDecorator({ status: 200, description: 'Liquidation processed' })
+  @ApiResponseDecorator({ status: 400, description: 'Invalid request' })
+  @ApiResponseDecorator({ status: 401, description: 'Unauthorized - Provide JWT token or API key' })
+  async processLiquidation(@Req() request: any, @Body() dto: LiquidateLoanDto) {
+    try {
+      // Extract merchantId from either JWT (request.user) or API Key (request.merchant)
+      const merchantId = request.merchant?.merchantId || request.user?.merchantId;
+      const result = await this.liquidationService.processLiquidation(
+        merchantId,
+        dto.loanId,
+        dto.amount || 0,
+        dto.reference,
+        dto.method,
+      );
+      return ApiResponse.success(result, 'Liquidation processed successfully');
     } catch (error) {
       return ApiResponse.error(error.message, error);
     }

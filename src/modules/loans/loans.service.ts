@@ -212,6 +212,59 @@ export class LoansService {
   /**
    * Find all loans
    */
+  async getCustomerLoansByEmail(merchantId: string, email: string): Promise<Loan[]> {
+    try {
+      this.logger.log(`Getting loans for customer email: ${email}, merchant: ${merchantId}`);
+
+      // First, find the customer by email and merchantId
+      const customersSnapshot = await this.firestore
+        .collection('crl_customers')
+        .where('email', '==', email)
+        .where('merchantId', '==', merchantId)
+        .limit(1)
+        .get();
+
+      if (customersSnapshot.empty) {
+        this.logger.log(`No customer found with email ${email} for merchant ${merchantId}`);
+        return [];
+      }
+
+      const customerId = customersSnapshot.docs[0].id;
+
+      // Get all loans for this customer and merchant
+      const loansSnapshot = await this.firestore
+        .collection('crl_loans')
+        .where('customerId', '==', customerId)
+        .where('merchantId', '==', merchantId)
+        .orderBy('createdAt', 'desc')
+        .get();
+
+      const loans = loansSnapshot.docs.map((doc) => {
+        const data = doc.data();
+        return {
+          ...data,
+          createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(data.createdAt),
+          updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate() : new Date(data.updatedAt),
+          activatedAt: data.activatedAt?.toDate ? data.activatedAt.toDate() : data.activatedAt,
+          firstPaymentDate: data.firstPaymentDate?.toDate
+            ? data.firstPaymentDate.toDate()
+            : data.firstPaymentDate,
+          lastPaymentDate: data.lastPaymentDate?.toDate
+            ? data.lastPaymentDate.toDate()
+            : data.lastPaymentDate,
+          completedAt: data.completedAt?.toDate ? data.completedAt.toDate() : data.completedAt,
+          defaultedAt: data.defaultedAt?.toDate ? data.defaultedAt.toDate() : data.defaultedAt,
+        } as Loan;
+      });
+
+      this.logger.log(`Found ${loans.length} loans for customer ${email}`);
+      return loans;
+    } catch (error) {
+      this.logger.error(`Failed to get customer loans: ${error.message}`, error.stack);
+      throw error;
+    }
+  }
+
   async findAll(filters?: {
     merchantId?: string;
     customerId?: string;

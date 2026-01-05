@@ -14,6 +14,11 @@ import { WebhooksModule } from './modules/webhooks/webhooks.module';
 import { DefaultsModule } from './modules/defaults/defaults.module';
 import { AnalyticsModule } from './modules/analytics/analytics.module';
 import { FinanciersModule } from './modules/financiers/financiers.module';
+import { CheckoutModule } from './modules/checkout/checkout.module';
+import { DisbursementsModule } from './modules/disbursements/disbursements.module';
+import { ProviderWebhooksModule } from './modules/provider-webhooks/provider-webhooks.module';
+import { IntegrationsModule } from './modules/integrations/integrations.module';
+import { RepaymentsModule } from './modules/repayments/repayments.module';
 
 @Module({
   imports: [
@@ -33,6 +38,11 @@ import { FinanciersModule } from './modules/financiers/financiers.module';
     DefaultsModule,
     AnalyticsModule,
     FinanciersModule,
+    CheckoutModule,
+    DisbursementsModule,
+    ProviderWebhooksModule,
+    IntegrationsModule,
+    RepaymentsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
