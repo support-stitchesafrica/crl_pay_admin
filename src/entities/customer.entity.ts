@@ -36,9 +36,10 @@ export interface Customer {
   cardAuthorizedAt?: Date;
 
   // Metadata
+  merchantId: string; // Primary merchant this customer belongs to
   deviceFingerprint?: string;
   ipAddress?: string;
-  registeredVia: string; // merchantId
+  registeredVia: string; // merchantId (legacy - same as merchantId)
   createdAt: Date;
   updatedAt: Date;
   lastLoanAt?: Date;

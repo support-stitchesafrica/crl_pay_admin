@@ -3,7 +3,7 @@ import { Firestore } from '@google-cloud/firestore';
 import { ConfigService } from '@nestjs/config';
 import { v4 as uuidv4 } from 'uuid';
 import { PayoutIntegration, RepaymentIntegration } from '../../entities/integration.entity';
-import { SystemPayoutSettings, SystemRepaymentSettings } from '../../entities/system-settings.entity';
+import { SystemPayoutSettings, SystemRepaymentSettings, SystemLoanSettings } from '../../entities/system-settings.entity';
 import {
   CreatePayoutIntegrationDto,
   CreateRepaymentIntegrationDto,
@@ -378,6 +378,46 @@ export class IntegrationsService {
         `Failed to set active repayment integration: ${error.message}`,
         error.stack,
       );
+      throw error;
+    }
+  }
+
+  async getLoanSettings(): Promise<SystemLoanSettings | null> {
+    const settingsDoc = await this.firestore
+      .collection('crl_system_settings')
+      .doc('loan_settings')
+      .get();
+
+    if (!settingsDoc.exists) {
+      return null;
+    }
+
+    const data = settingsDoc.data();
+    return {
+      ...data,
+      updatedAt: data?.updatedAt?.toDate ? data.updatedAt.toDate() : new Date(data?.updatedAt),
+    } as SystemLoanSettings;
+  }
+
+  async updateLoanSettings(daysInYear: number): Promise<SystemLoanSettings> {
+    try {
+      if (![360, 365, 366].includes(daysInYear)) {
+        throw new BadRequestException('daysInYear must be 360, 365, or 366');
+      }
+
+      const settings: SystemLoanSettings = {
+        settingsId: 'loan_settings',
+        daysInYear,
+        updatedAt: new Date(),
+      };
+
+      await this.firestore.collection('crl_system_settings').doc('loan_settings').set(settings);
+
+      this.logger.log(`Loan settings updated: Days in year = ${daysInYear}`);
+
+      return settings;
+    } catch (error) {
+      this.logger.error(`Failed to update loan settings: ${error.message}`, error.stack);
       throw error;
     }
   }

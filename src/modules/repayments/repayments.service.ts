@@ -15,10 +15,12 @@ export class RepaymentsService {
     const snapshot = await this.firestore
       .collection('crl_repayment_schedules')
       .where('loanId', '==', loanId)
-      .orderBy('installmentNumber', 'asc')
+      .orderBy('dueDate', 'asc')
       .get();
 
-    return snapshot.docs.map((doc) => {
+    return snapshot.docs
+      .filter(doc => doc.data().status !== 'deleted')
+      .map((doc) => {
       const data = doc.data();
       return {
         ...data,

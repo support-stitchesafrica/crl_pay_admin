@@ -22,6 +22,12 @@ export interface CreateIntegrationDto {
   webhookSecretEnvRef?: string;
 }
 
+export interface LoanSettings {
+  settingsId: 'loan_settings';
+  daysInYear: number;
+  updatedAt: string;
+}
+
 export const integrationsService = {
   // Payout Integrations
   async getPayoutIntegrations(): Promise<PayoutIntegration[]> {
@@ -88,5 +94,20 @@ export const integrationsService = {
 
   async setActiveRepaymentIntegration(integrationId: string): Promise<void> {
     await api.put('/admin/integrations/settings/repayments', { integrationId });
+  },
+
+  // Loan Settings
+  async getLoanSettings(): Promise<LoanSettings | null> {
+    try {
+      const response = await api.get('/admin/integrations/settings/loans');
+      return response.data.data;
+    } catch (error) {
+      return null;
+    }
+  },
+
+  async updateLoanSettings(daysInYear: number): Promise<LoanSettings> {
+    const response = await api.put('/admin/integrations/settings/loans', { daysInYear });
+    return response.data.data;
   },
 };

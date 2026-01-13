@@ -3,6 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <title>Stitches Africa - Fashion Store</title>
     <style>
         * {
@@ -45,6 +48,27 @@
             font-size: 24px;
             color: #2563eb;
             font-weight: 700;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .my-loans-button {
+            background: #10b981;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .my-loans-button:hover {
+            background: #059669;
         }
 
         .cart-button {
@@ -503,6 +527,397 @@
             background: #f9fafb;
         }
 
+        /* Loans Modal */
+        .loans-modal {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 0;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            z-index: 300;
+            display: none;
+            max-width: 800px;
+            width: 90%;
+            max-height: 90vh;
+            overflow: hidden;
+        }
+
+        .loans-modal.show {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .loans-modal-header {
+            padding: 24px;
+            border-bottom: 1px solid #e5e7eb;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #f9fafb;
+        }
+
+        .loans-modal-header h3 {
+            font-size: 24px;
+            color: #1a1a1a;
+            font-weight: 700;
+        }
+
+        .loans-modal-body {
+            padding: 24px;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .loan-card {
+            background: #f9fafb;
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 16px;
+            transition: all 0.2s;
+        }
+
+        .loan-card:hover {
+            border-color: #2563eb;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.1);
+        }
+
+        .loan-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .loan-account {
+            font-size: 18px;
+            font-weight: 700;
+            color: #2563eb;
+            font-family: monospace;
+        }
+
+        .loan-status {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .loan-status.active {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        .loan-status.completed {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .loan-details {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .loan-detail-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .loan-detail-label {
+            font-size: 12px;
+            color: #6b7280;
+            margin-bottom: 4px;
+        }
+
+        .loan-detail-value {
+            font-size: 16px;
+            font-weight: 600;
+            color: #1a1a1a;
+        }
+
+        .loan-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid #e5e7eb;
+        }
+
+        .liquidate-btn {
+            flex: 1;
+            background: #10b981;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .liquidate-btn:hover {
+            background: #059669;
+        }
+
+        .liquidate-btn:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+        }
+
+        /* Liquidation Modal */
+        .liquidation-modal {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 0;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            z-index: 400;
+            display: none;
+            max-width: 600px;
+            width: 90%;
+            max-height: 90vh;
+            overflow: hidden;
+        }
+
+        .liquidation-modal.show {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .liquidation-modal-header {
+            padding: 24px;
+            border-bottom: 1px solid #e5e7eb;
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+        }
+
+        .liquidation-modal-header h3 {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .liquidation-modal-header p {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .liquidation-modal-body {
+            padding: 24px;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .liquidation-type-selector {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .liquidation-type-btn {
+            padding: 16px;
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+        }
+
+        .liquidation-type-btn:hover {
+            border-color: #10b981;
+        }
+
+        .liquidation-type-btn.active {
+            border-color: #10b981;
+            background: #d1fae5;
+        }
+
+        .liquidation-type-btn .icon {
+            font-size: 32px;
+            margin-bottom: 8px;
+        }
+
+        .liquidation-type-btn .title {
+            font-weight: 600;
+            color: #1a1a1a;
+            margin-bottom: 4px;
+        }
+
+        .liquidation-type-btn .desc {
+            font-size: 12px;
+            color: #6b7280;
+        }
+
+        .amount-input-group {
+            margin-bottom: 24px;
+        }
+
+        .amount-input-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #1a1a1a;
+        }
+
+        .amount-input-wrapper {
+            display: flex;
+            gap: 8px;
+        }
+
+        .amount-input {
+            flex: 1;
+            padding: 12px 16px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .amount-input:focus {
+            outline: none;
+            border-color: #10b981;
+        }
+
+        .calculate-btn {
+            padding: 12px 24px;
+            background: #2563eb;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .calculate-btn:hover {
+            background: #1d4ed8;
+        }
+
+        .liquidation-summary {
+            background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 24px;
+        }
+
+        .liquidation-summary .total {
+            text-align: center;
+            margin-bottom: 16px;
+        }
+
+        .liquidation-summary .total-label {
+            font-size: 14px;
+            color: #065f46;
+            margin-bottom: 4px;
+        }
+
+        .liquidation-summary .total-amount {
+            font-size: 32px;
+            font-weight: 700;
+            color: #065f46;
+        }
+
+        .liquidation-breakdown {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .breakdown-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 12px;
+            background: white;
+            border-radius: 8px;
+        }
+
+        .breakdown-item .label {
+            color: #6b7280;
+        }
+
+        .breakdown-item .value {
+            font-weight: 600;
+            color: #1a1a1a;
+        }
+
+        .liquidation-actions {
+            display: flex;
+            gap: 12px;
+        }
+
+        .cancel-btn {
+            flex: 1;
+            padding: 14px;
+            background: #f3f4f6;
+            color: #374151;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .cancel-btn:hover {
+            background: #e5e7eb;
+        }
+
+        .confirm-liquidation-btn {
+            flex: 2;
+            padding: 14px;
+            background: #10b981;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .confirm-liquidation-btn:hover {
+            background: #059669;
+        }
+
+        .confirm-liquidation-btn:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .error-message {
+            background: #fee2e2;
+            border: 1px solid #fecaca;
+            color: #991b1b;
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            font-size: 14px;
+        }
+
         @media (max-width: 768px) {
             .cart-sidebar {
                 width: 100%;
@@ -527,10 +942,15 @@
                 <span>🏪</span>
                 <h1>Stitches Africa</h1>
             </div>
-            <button class="cart-button" onclick="toggleCart()">
-                🛒 Cart
-                <span class="cart-count" id="cartCount">0</span>
-            </button>
+            <div class="header-actions">
+                <button class="my-loans-button" onclick="showMyLoans()">
+                    💳 My Loans
+                </button>
+                <button class="cart-button" onclick="toggleCart()">
+                    🛒 Cart
+                    <span class="cart-count" id="cartCount">0</span>
+                </button>
+            </div>
         </div>
     </div>
 
@@ -570,6 +990,28 @@
 
     <!-- Overlay -->
     <div class="overlay" id="overlay" onclick="toggleCart()"></div>
+
+    <!-- Loans Modal -->
+    <div class="loans-modal" id="loansModal">
+        <div class="loans-modal-header">
+            <h3>My Loans</h3>
+            <button class="close-cart" onclick="closeLoansModal()">✕</button>
+        </div>
+        <div class="loans-modal-body" id="loansModalBody">
+            <p style="text-align: center; color: #6b7280;">Loading loans...</p>
+        </div>
+    </div>
+
+    <!-- Liquidation Modal -->
+    <div class="liquidation-modal" id="liquidationModal">
+        <div class="liquidation-modal-header">
+            <h3>Liquidate Loan</h3>
+            <p id="liquidationLoanAccount"></p>
+        </div>
+        <div class="liquidation-modal-body" id="liquidationModalBody">
+            <!-- Content will be dynamically populated -->
+        </div>
+    </div>
 
     <!-- Success Modal -->
     <div class="success-modal" id="successModal">
@@ -635,6 +1077,10 @@
 
         // CRL Pay configuration
         const publicKey = 'pk_1b689d60c35a36c014b0809437bf55b8c063ca25d893a8c8';
+        const secretKey = 'sk_9d2f90ddac6955021bc0f4f4305265ee6d5dc3f5d5e7f683fdd56212812084eb'; // Merchant secret key
+        const apiBaseUrl = 'http://localhost:3006/api/v1';
+        const customerEmail = 'customer@example.com'; // In production, get from logged-in user
+        
         const crlpay = new CRLPay({
             publicKey: publicKey,
             mode: 'iframe'
@@ -893,6 +1339,420 @@
             setTimeout(() => {
                 notification.remove();
             }, 2000);
+        }
+
+        // ========== LIQUIDATION FUNCTIONS ==========
+
+        let currentLiquidationLoan = null;
+        let liquidationCalculation = null;
+
+        // Show My Loans modal
+        async function showMyLoans() {
+            const modal = document.getElementById('loansModal');
+            const overlay = document.getElementById('overlay');
+            const body = document.getElementById('loansModalBody');
+
+            modal.classList.add('show');
+            overlay.classList.add('show');
+            body.innerHTML = '<p style="text-align: center; color: #6b7280;">Loading loans...</p>';
+
+            try {
+                // Fetch customer loans using secret key
+                const response = await fetch(`${apiBaseUrl}/loans/customer/${customerEmail}`, {
+                    headers: {
+                        'x-api-key': secretKey
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to fetch loans');
+                }
+
+                const result = await response.json();
+                const loans = result.data || [];
+
+                if (loans.length === 0) {
+                    body.innerHTML = '<p style="text-align: center; color: #6b7280;">No active loans found</p>';
+                    return;
+                }
+
+                // Render loans
+                body.innerHTML = loans.map(loan => `
+                    <div class="loan-card">
+                        <div class="loan-card-header">
+                            <div class="loan-account">${loan.loanAccountNumber || loan.loanId}</div>
+                            <div class="loan-status ${loan.status}">${loan.status}</div>
+                        </div>
+                        <div class="loan-details">
+                            <div class="loan-detail-item">
+                                <div class="loan-detail-label">Principal Amount</div>
+                                <div class="loan-detail-value">₦${loan.principalAmount.toLocaleString()}</div>
+                            </div>
+                            <div class="loan-detail-item">
+                                <div class="loan-detail-label">Amount Paid</div>
+                                <div class="loan-detail-value">₦${loan.amountPaid.toLocaleString()}</div>
+                            </div>
+                            <div class="loan-detail-item">
+                                <div class="loan-detail-label">Amount Remaining</div>
+                                <div class="loan-detail-value">₦${loan.amountRemaining.toLocaleString()}</div>
+                            </div>
+                            <div class="loan-detail-item">
+                                <div class="loan-detail-label">Installments</div>
+                                <div class="loan-detail-value">${loan.configuration.numberOfInstallments} payments</div>
+                            </div>
+                        </div>
+                        ${loan.status === 'active' ? `
+                            <div class="loan-actions">
+                                <button class="liquidate-btn" onclick='openLiquidationModal(${JSON.stringify(loan)})'>
+                                    💰 Liquidate Loan
+                                </button>
+                            </div>
+                        ` : ''}
+                    </div>
+                `).join('');
+
+            } catch (error) {
+                console.error('Error fetching loans:', error);
+                body.innerHTML = '<p style="text-align: center; color: #dc2626;">Failed to load loans. Please try again.</p>';
+            }
+        }
+
+        // Close loans modal
+        function closeLoansModal() {
+            const modal = document.getElementById('loansModal');
+            const overlay = document.getElementById('overlay');
+            modal.classList.remove('show');
+            overlay.classList.remove('show');
+        }
+
+        // Open liquidation modal
+        async function openLiquidationModal(loan) {
+            currentLiquidationLoan = loan;
+            liquidationCalculation = null;
+
+            const modal = document.getElementById('liquidationModal');
+            const overlay = document.getElementById('overlay');
+            const accountElement = document.getElementById('liquidationLoanAccount');
+            const body = document.getElementById('liquidationModalBody');
+
+            accountElement.textContent = `Account: ${loan.loanAccountNumber}`;
+            
+            modal.classList.add('show');
+            overlay.classList.add('show');
+
+            // Fetch max liquidation amount
+            body.innerHTML = '<p style="text-align: center; color: #6b7280;">Loading liquidation details...</p>';
+
+            try {
+                const response = await fetch(`${apiBaseUrl}/loans/liquidation/max-amount/${loan.loanId}`, {
+                    headers: {
+                        'x-api-key': secretKey
+                    }
+                });
+
+                console.log('Liquidation response status:', response.status);
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('API error response:', errorText);
+                    throw new Error(`Failed to fetch liquidation amount: ${response.status}`);
+                }
+
+                const result = await response.json();
+                console.log('Liquidation API result:', result);
+                
+                if (!result.success || !result.data) {
+                    throw new Error(result.message || 'Invalid API response');
+                }
+                
+                const maxData = result.data;
+                console.log('Max liquidation data:', maxData);
+
+                // Render liquidation UI
+                renderLiquidationUI(maxData);
+
+            } catch (error) {
+                console.error('Error fetching liquidation amount:', error);
+                body.innerHTML = `<div class="error-message">Failed to load liquidation details. ${error.message}</div>`;
+            }
+        }
+
+        // Render liquidation UI
+        function renderLiquidationUI(maxData) {
+            const body = document.getElementById('liquidationModalBody');
+            
+            body.innerHTML = `
+                <div class="liquidation-type-selector">
+                    <div class="liquidation-type-btn active" id="fullLiquidationBtn" onclick="selectLiquidationType('full', ${maxData.maxAmount})">
+                        <div class="icon">💯</div>
+                        <div class="title">Full Liquidation</div>
+                        <div class="desc">Pay off entire loan</div>
+                    </div>
+                    <div class="liquidation-type-btn" id="partialLiquidationBtn" onclick="selectLiquidationType('partial', ${maxData.maxAmount})">
+                        <div class="icon">📊</div>
+                        <div class="title">Partial Liquidation</div>
+                        <div class="desc">Pay custom amount</div>
+                    </div>
+                </div>
+
+                <div class="amount-input-group" id="partialAmountGroup" style="display: none;">
+                    <label>Amount to Pay (Max: ₦${maxData.maxAmount.toLocaleString()})</label>
+                    <div class="amount-input-wrapper">
+                        <input type="number" class="amount-input" id="partialAmountInput" placeholder="Enter amount" max="${maxData.maxAmount}">
+                        <button class="calculate-btn" onclick="calculatePartialLiquidation(${maxData.maxAmount})">Calculate</button>
+                    </div>
+                </div>
+
+                <div id="liquidationSummaryContainer"></div>
+
+                <div class="liquidation-actions">
+                    <button class="cancel-btn" onclick="closeLiquidationModal()">Cancel</button>
+                    <button class="confirm-liquidation-btn" id="confirmLiquidationBtn" onclick="confirmLiquidation()" disabled>
+                        Confirm Payment
+                    </button>
+                </div>
+            `;
+
+            // Auto-show full liquidation summary
+            liquidationCalculation = maxData;
+            console.log('✅ Initial liquidation data set from max-amount:', liquidationCalculation);
+            showLiquidationSummary(maxData);
+        }
+
+        // Select liquidation type
+        function selectLiquidationType(type, maxAmount) {
+            const fullBtn = document.getElementById('fullLiquidationBtn');
+            const partialBtn = document.getElementById('partialLiquidationBtn');
+            const partialGroup = document.getElementById('partialAmountGroup');
+
+            if (type === 'full') {
+                fullBtn.classList.add('active');
+                partialBtn.classList.remove('active');
+                partialGroup.style.display = 'none';
+                
+                // Fetch full liquidation calculation
+                calculateFullLiquidation();
+            } else {
+                fullBtn.classList.remove('active');
+                partialBtn.classList.add('active');
+                partialGroup.style.display = 'block';
+                document.getElementById('liquidationSummaryContainer').innerHTML = '';
+                document.getElementById('confirmLiquidationBtn').disabled = true;
+            }
+        }
+
+        // Calculate full liquidation
+        async function calculateFullLiquidation() {
+            const summaryContainer = document.getElementById('liquidationSummaryContainer');
+            summaryContainer.innerHTML = '<p style="text-align: center; color: #6b7280;">Calculating...</p>';
+
+            try {
+                const response = await fetch(`${apiBaseUrl}/loans/liquidation/calculate`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-api-key': secretKey
+                    },
+                    body: JSON.stringify({
+                        loanId: currentLiquidationLoan.loanId
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to calculate liquidation');
+                }
+
+                const result = await response.json();
+                liquidationCalculation = result.data;
+                console.log('✅ Full liquidation calculated:', liquidationCalculation);
+                showLiquidationSummary(liquidationCalculation);
+
+            } catch (error) {
+                console.error('Error calculating liquidation:', error);
+                summaryContainer.innerHTML = '<div class="error-message">Failed to calculate. Please try again.</div>';
+            }
+        }
+
+        // Calculate partial liquidation
+        async function calculatePartialLiquidation(maxAmount) {
+            const input = document.getElementById('partialAmountInput');
+            const amount = parseFloat(input.value);
+
+            if (isNaN(amount) || amount <= 0) {
+                alert('Please enter a valid amount');
+                return;
+            }
+
+            if (amount > maxAmount) {
+                alert(`Amount cannot exceed ₦${maxAmount.toLocaleString()}`);
+                return;
+            }
+
+            const summaryContainer = document.getElementById('liquidationSummaryContainer');
+            summaryContainer.innerHTML = '<p style="text-align: center; color: #6b7280;">Calculating...</p>';
+
+            try {
+                const response = await fetch(`${apiBaseUrl}/loans/liquidation/calculate`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-api-key': secretKey
+                    },
+                    body: JSON.stringify({
+                        loanId: currentLiquidationLoan.loanId,
+                        amount: amount
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to calculate liquidation');
+                }
+
+                const result = await response.json();
+                liquidationCalculation = result.data;
+                showLiquidationSummary(liquidationCalculation);
+
+            } catch (error) {
+                console.error('Error calculating liquidation:', error);
+                summaryContainer.innerHTML = '<div class="error-message">Failed to calculate. Please try again.</div>';
+            }
+        }
+
+        // Show liquidation summary
+        function showLiquidationSummary(calculation) {
+            console.log('showLiquidationSummary called with:', calculation);
+            
+            const summaryContainer = document.getElementById('liquidationSummaryContainer');
+            const confirmBtn = document.getElementById('confirmLiquidationBtn');
+            
+            // Validate calculation object
+            if (!calculation || !calculation.breakdown) {
+                console.error('Invalid calculation object:', calculation);
+                summaryContainer.innerHTML = '<div class="error-message">Invalid liquidation data</div>';
+                return;
+            }
+            
+            // Handle both maxAmount (from max-amount endpoint) and totalDue (from calculate endpoint)
+            const totalAmount = calculation.totalDue || calculation.maxAmount;
+            
+            if (!totalAmount) {
+                console.error('No totalDue or maxAmount in calculation:', calculation);
+                summaryContainer.innerHTML = '<div class="error-message">Missing amount data</div>';
+                return;
+            }
+
+            summaryContainer.innerHTML = `
+                <div class="liquidation-summary">
+                    <div class="total">
+                        <div class="total-label">Total Amount Due</div>
+                        <div class="total-amount">₦${totalAmount.toLocaleString()}</div>
+                    </div>
+                    <div class="liquidation-breakdown">
+                        <div class="breakdown-item">
+                            <span class="label">Principal</span>
+                            <span class="value">₦${(calculation.breakdown.unpaidPrincipal || 0).toLocaleString()}</span>
+                        </div>
+                        <div class="breakdown-item">
+                            <span class="label">Accrued Interest</span>
+                            <span class="value">₦${(calculation.breakdown.accruedInterest || 0).toLocaleString()}</span>
+                        </div>
+                        ${(calculation.breakdown.lateFees || 0) > 0 ? `
+                            <div class="breakdown-item">
+                                <span class="label">Late Fees</span>
+                                <span class="value">₦${calculation.breakdown.lateFees.toLocaleString()}</span>
+                            </div>
+                        ` : ''}
+                    </div>
+                    ${!calculation.isFullLiquidation && calculation.remainingBalance ? `
+                        <div style="margin-top: 12px; padding: 12px; background: white; border-radius: 8px; text-align: center;">
+                            <div style="font-size: 12px; color: #6b7280; margin-bottom: 4px;">Remaining Balance</div>
+                            <div style="font-size: 18px; font-weight: 700; color: #2563eb;">₦${calculation.remainingBalance.toLocaleString()}</div>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+
+            confirmBtn.disabled = false;
+        }
+
+        // Confirm liquidation
+        async function confirmLiquidation() {
+            console.log('🔍 confirmLiquidation called, liquidationCalculation:', liquidationCalculation);
+            
+            if (!liquidationCalculation) {
+                console.error('❌ liquidationCalculation is null/undefined');
+                alert('Please calculate liquidation first');
+                return;
+            }
+
+            const confirmBtn = document.getElementById('confirmLiquidationBtn');
+            confirmBtn.disabled = true;
+            confirmBtn.innerHTML = '<span class="loading-spinner"></span> Processing...';
+
+            try {
+                const reference = `LIQ_${Date.now()}`;
+                const payload = {
+                    loanId: currentLiquidationLoan.loanId,
+                    reference: reference,
+                    method: 'auto_debit'
+                };
+                
+                // Only include amount for partial liquidation
+                if (!liquidationCalculation.isFullLiquidation) {
+                    payload.amount = liquidationCalculation.totalDue;
+                }
+                
+                console.log('📤 Sending liquidation payload:', payload);
+                console.log('📊 isFullLiquidation:', liquidationCalculation.isFullLiquidation);
+                
+                const response = await fetch(`${apiBaseUrl}/loans/liquidation/process`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-api-key': secretKey
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.message || 'Liquidation failed');
+                }
+
+                const result = await response.json();
+                console.log('Liquidation result:', result);
+                
+                // Get the calculation from the response
+                const processedCalculation = result.data?.calculation || liquidationCalculation;
+
+                // Close liquidation modal
+                closeLiquidationModal();
+                closeLoansModal();
+
+                // Show success message
+                const amount = processedCalculation?.totalDue || 0;
+                const isFullLiquidation = processedCalculation?.isFullLiquidation || false;
+                
+                alert(`✅ Liquidation Successful!\n\nAmount: ₦${amount.toLocaleString()}\nReference: ${reference}\n\n${isFullLiquidation ? 'Your loan has been fully paid off!' : 'Partial payment processed successfully!'}`);
+
+            } catch (error) {
+                console.error('Error processing liquidation:', error);
+                alert('❌ Liquidation Failed: ' + error.message);
+                confirmBtn.disabled = false;
+                confirmBtn.innerHTML = 'Confirm Payment';
+            }
+        }
+
+        // Close liquidation modal
+        function closeLiquidationModal() {
+            const modal = document.getElementById('liquidationModal');
+            const overlay = document.getElementById('overlay');
+            modal.classList.remove('show');
+            if (!document.getElementById('loansModal').classList.contains('show')) {
+                overlay.classList.remove('show');
+            }
+            currentLiquidationLoan = null;
+            liquidationCalculation = null;
         }
 
         // Initialize

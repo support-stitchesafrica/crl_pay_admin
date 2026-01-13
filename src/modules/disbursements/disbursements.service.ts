@@ -237,11 +237,36 @@ export class DisbursementsService {
 
       await this.firestore.collection('crl_transactions').doc(transactionId).set(ledgerEntry);
 
+      // Fetch financing plan to get actual interest rate and configuration
+      if (!reservation.planId) {
+        throw new BadRequestException('Reservation does not have a financing plan');
+      }
+
+      const planDoc = await this.firestore
+        .collection('crl_financing_plans')
+        .doc(reservation.planId)
+        .get();
+
+      if (!planDoc.exists) {
+        throw new NotFoundException('Financing plan not found');
+      }
+
+      const plan = planDoc.data();
+      const interestRate = plan?.interestRate || 0;
+      const lateFee = plan?.lateFee || { type: 'percentage', amount: 5 };
+      const frequency = plan?.frequency || 'monthly';
+      const tenor = plan?.tenor || { value: 3, period: 'MONTHS' };
+
+      // Calculate loan configuration with actual interest rate
+      const numberOfInstallments = tenor.value;
+      const totalInterest = Math.ceil((reservation.amount * interestRate * tenor.value) / 100);
+      const totalAmount = reservation.amount + totalInterest;
+      const installmentAmount = Math.ceil(totalAmount / numberOfInstallments);
+
       // Create loan immediately after successful disbursement initiation
       const loanId = uuidv4();
       const loanAccountNumber = `LOAN-${Date.now()}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
       
-      // Create basic loan configuration (will be updated with actual plan details via webhook/background job)
       const loan: Loan = {
         loanId,
         loanAccountNumber,
@@ -249,14 +274,15 @@ export class DisbursementsService {
         merchantId,
         principalAmount: reservation.amount,
         configuration: {
-          frequency: 'monthly',
-          tenor: { value: 3, period: 'MONTHS' },
-          numberOfInstallments: 3,
-          interestRate: 0,
-          penaltyRate: 5,
-          installmentAmount: Math.ceil(reservation.amount / 3),
-          totalInterest: 0,
-          totalAmount: reservation.amount,
+          frequency,
+          tenor,
+          numberOfInstallments,
+          interestRate,
+          penaltyRate: lateFee.type === 'percentage' ? lateFee.amount : 0, // Keep for backward compatibility
+          lateFee,
+          installmentAmount,
+          totalInterest,
+          totalAmount,
         },
         paymentSchedule: [], // Will be populated after plan details are fetched
         status: 'active',

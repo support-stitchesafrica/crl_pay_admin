@@ -106,6 +106,7 @@ export class LoanCalculatorService {
       numberOfInstallments,
       interestRate,
       penaltyRate,
+      lateFee: { type: 'percentage', amount: penaltyRate }, // Convert penaltyRate to lateFee structure
       installmentAmount,
       totalInterest: Math.ceil(totalInterest),
       totalAmount: installmentAmount * numberOfInstallments, // Recalculate to account for rounding
@@ -196,20 +197,29 @@ export class LoanCalculatorService {
 
   /**
    * Calculate late fees/penalties for overdue payments
-   * Uses the penalty rate from merchant configuration
+   * Supports both percentage-based and fixed amount late fees
    */
   calculateLateFees(
     overdueAmount: number,
     daysOverdue: number,
-    penaltyRate: number,
+    lateFeeConfig: { type: 'fixed' | 'percentage'; amount: number } | number,
   ): number {
     if (daysOverdue <= 0) return 0;
 
-    // Apply penalty rate to overdue amount
-    // This is a simple implementation - you can make it more sophisticated
-    // For example, compounding daily or having escalating rates
+    // Handle new lateFee object structure
+    if (typeof lateFeeConfig === 'object') {
+      if (lateFeeConfig.type === 'fixed') {
+        // Fixed amount late fee (e.g., 1000 NGN per overdue payment)
+        return lateFeeConfig.amount;
+      } else {
+        // Percentage-based late fee (e.g., 2% of overdue amount)
+        return Math.ceil((overdueAmount * lateFeeConfig.amount) / 100);
+      }
+    }
+    
+    // Fallback to old penaltyRate number for backward compatibility
+    const penaltyRate = lateFeeConfig;
     const lateFee = (overdueAmount * penaltyRate) / 100;
-
     return Math.ceil(lateFee);
   }
 

@@ -99,3 +99,55 @@ export const updateLoanNotes = async (loanId: string, notes: string): Promise<Lo
 
   return response.data.data;
 };
+
+/**
+ * Manually trigger interest accrual for a loan (admin only)
+ */
+export const triggerInterestAccrual = async (loanId: string): Promise<void> => {
+  const response = await api.post(`/loans/${loanId}/accrue-interest`);
+
+  if (!response.data.success) {
+    throw new Error(response.data.message || 'Failed to trigger interest accrual');
+  }
+};
+
+/**
+ * Trigger interest accrual for all active loans (admin only)
+ */
+export const triggerInterestAccrualForAll = async (): Promise<void> => {
+  const response = await api.post('/loans/accrue-interest/all');
+
+  if (!response.data.success) {
+    throw new Error(response.data.message || 'Failed to trigger interest accrual for all loans');
+  }
+};
+
+/**
+ * Trigger backfill of missed accruals (admin only)
+ */
+export const backfillMissedAccruals = async (): Promise<void> => {
+  const response = await api.post('/loans/accrue-interest/backfill');
+
+  if (!response.data.success) {
+    throw new Error(response.data.message || 'Failed to backfill missed accruals');
+  }
+};
+
+/**
+ * Record manual repayment (bank transfer, cash, etc.)
+ */
+export const recordManualRepayment = async (data: {
+  loanId: string;
+  scheduleId: string;
+  amount: number;
+  reference: string;
+  method?: string;
+}): Promise<any> => {
+  const response = await api.post('/repayments/manual', data);
+
+  if (!response.data.success) {
+    throw new Error(response.data.message || 'Failed to record manual repayment');
+  }
+
+  return response.data.data;
+};

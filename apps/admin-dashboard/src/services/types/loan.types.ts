@@ -28,6 +28,17 @@ export interface PaymentScheduleItem {
   paymentId?: string;
   attemptCount?: number;
   lastAttemptAt?: string;
+  // Accrual tracking fields
+  accruedInterest?: number;
+  remainingPrincipal?: number;
+  originalPrincipal?: number;
+  lastAccrualDate?: string;
+  lateFee?: number;
+}
+
+export interface LateFee {
+  type: 'fixed' | 'percentage';
+  amount: number;
 }
 
 export interface LoanConfiguration {
@@ -35,7 +46,8 @@ export interface LoanConfiguration {
   tenor: Tenor;
   numberOfInstallments: number;
   interestRate: number;
-  penaltyRate: number;
+  penaltyRate: number; // DEPRECATED: Use lateFee instead
+  lateFee?: LateFee; // Late payment penalty (can be fixed amount or percentage)
   installmentAmount: number;
   totalInterest: number;
   totalAmount: number;
@@ -53,6 +65,7 @@ export interface CardAuthorization {
 
 export interface Loan {
   loanId: string;
+  loanAccountNumber?: string;
   merchantId: string;
   customerId: string;
   principalAmount: number;
@@ -66,18 +79,20 @@ export interface Loan {
   orderId?: string;
   productDescription?: string;
   metadata?: Record<string, any>;
-  createdAt: string;
-  activatedAt?: string;
-  firstPaymentDate?: string;
-  lastPaymentDate?: string;
-  completedAt?: string;
-  defaultedAt?: string;
+  // Timestamps
+  createdAt: Date;
+  updatedAt: Date;
+  bookingDate?: Date;
+  activatedAt?: Date;
+  firstPaymentDate?: Date;
+  lastPaymentDate?: Date;
+  completedAt?: Date;
+  defaultedAt?: Date;
   daysOverdue?: number;
   overdueAmount?: number;
   lateFees?: number;
   escalationLevel?: 'low' | 'medium' | 'high' | 'critical' | 'terminal';
   notes?: string;
-  updatedAt: string;
 }
 
 export interface LoanStats {

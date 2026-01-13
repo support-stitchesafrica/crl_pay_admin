@@ -72,7 +72,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         <nav className="flex-1 py-6 space-y-2">
           {menuItems.map((item) => {
             const Icon = item.icon;
-            const isActive = location.pathname === item.path;
+            // Match exact path or if it's the loans page, match any path starting with /loans
+            const isActive = location.pathname === item.path || 
+              (item.path === '/loans' && location.pathname.startsWith('/loans/'));
 
             return (
               <Link

@@ -3,14 +3,17 @@ import { toast } from 'react-hot-toast';
 import { Loader2 } from 'lucide-react';
 import DashboardLayout from '../components/DashboardLayout';
 import { Input, Button } from '../components/ui';
-import { integrationsService, PayoutIntegration, CreateIntegrationDto } from '../services/integrations.service';
+import { integrationsService, PayoutIntegration, CreateIntegrationDto, LoanSettings } from '../services/integrations.service';
 
 export default function Integrations() {
-  const [activeTab, setActiveTab] = useState<'payout' | 'repayment'>('payout');
+  const [activeTab, setActiveTab] = useState<'payout' | 'repayment' | 'loan-settings'>('payout');
   const [payoutIntegrations, setPayoutIntegrations] = useState<PayoutIntegration[]>([]);
   const [repaymentIntegrations, setRepaymentIntegrations] = useState<PayoutIntegration[]>([]);
   const [activePayoutId, setActivePayoutId] = useState<string>('');
   const [activeRepaymentId, setActiveRepaymentId] = useState<string>('');
+  const [loanSettings, setLoanSettings] = useState<LoanSettings | null>(null);
+  const [daysInYear, setDaysInYear] = useState<number>(365);
+  const [savingLoanSettings, setSavingLoanSettings] = useState(false);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -30,17 +33,20 @@ export default function Integrations() {
   const loadIntegrations = async () => {
     try {
       setLoading(true);
-      const [payout, repayment, activePayout, activeRepayment] = await Promise.all([
+      const [payout, repayment, activePayout, activeRepayment, loanSettingsData] = await Promise.all([
         integrationsService.getPayoutIntegrations(),
         integrationsService.getRepaymentIntegrations(),
         integrationsService.getActivePayoutIntegration(),
         integrationsService.getActiveRepaymentIntegration(),
+        integrationsService.getLoanSettings(),
       ]);
 
       setPayoutIntegrations(payout);
       setRepaymentIntegrations(repayment);
       setActivePayoutId(activePayout?.integrationId || '');
       setActiveRepaymentId(activeRepayment?.integrationId || '');
+      setLoanSettings(loanSettingsData);
+      setDaysInYear(loanSettingsData?.daysInYear || 365);
     } catch (error: any) {
       toast.error('Failed to load integrations');
       console.error(error);
@@ -152,7 +158,21 @@ export default function Integrations() {
     }
   };
 
-  const currentIntegrations = activeTab === 'payout' ? payoutIntegrations : repaymentIntegrations;
+  const handleUpdateLoanSettings = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      setSavingLoanSettings(true);
+      const updated = await integrationsService.updateLoanSettings(daysInYear);
+      setLoanSettings(updated);
+      toast.success('Loan settings updated successfully');
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to update loan settings');
+    } finally {
+      setSavingLoanSettings(false);
+    }
+  };
+
+  const currentIntegrations = activeTab === 'payout' ? payoutIntegrations : activeTab === 'repayment' ? repaymentIntegrations : [];
   const currentActiveId = activeTab === 'payout' ? activePayoutId : activeRepaymentId;
 
   return (
@@ -191,18 +211,118 @@ export default function Integrations() {
             >
               Repayment Integrations
             </button>
+            <button
+              onClick={() => setActiveTab('loan-settings')}
+              className={`${
+                activeTab === 'loan-settings'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+            >
+              Loan Settings
+            </button>
           </nav>
         </div>
 
-        {/* Integrations List */}
-        {loading ? (
-          <div className="flex items-center justify-center h-64">
-            <div className="text-center">
-              <Loader2 className="w-8 h-8 animate-spin text-blue-600 mx-auto mb-3" />
-              <p className="text-gray-600">Loading integrations...</p>
+        {/* Loan Settings Tab Content */}
+        {activeTab === 'loan-settings' ? (
+          loading ? (
+            <div className="flex items-center justify-center h-64">
+              <div className="text-center">
+                <Loader2 className="w-8 h-8 animate-spin text-blue-600 mx-auto mb-3" />
+                <p className="text-gray-600">Loading settings...</p>
+              </div>
             </div>
-          </div>
-        ) : currentIntegrations.length === 0 ? (
+          ) : (
+            <div className="bg-white rounded-lg border border-gray-200 p-6 max-w-2xl">
+              <div className="mb-6">
+                <h2 className="text-xl font-bold text-gray-900 mb-2">Interest Calculation Settings</h2>
+                <p className="text-sm text-gray-600">
+                  Configure how daily interest is calculated for loans. Interest rates come from financing plans, 
+                  but you can control the number of days used in the calculation.
+                </p>
+              </div>
+
+              <form onSubmit={handleUpdateLoanSettings} className="space-y-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Days in Year for Interest Calculation
+                  </label>
+                  <select
+                    value={daysInYear}
+                    onChange={(e) => setDaysInYear(Number(e.target.value))}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    required
+                  >
+                    <option value={360}>360 days (Banking/Commercial)</option>
+                    <option value={365}>365 days (Standard Calendar)</option>
+                    <option value={366}>366 days (Leap Year)</option>
+                  </select>
+                  <p className="mt-2 text-sm text-gray-500">
+                    This determines how daily interest is calculated: <strong>Daily Rate = Annual Rate ÷ Days in Year</strong>
+                  </p>
+                </div>
+
+                {loanSettings && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <h3 className="text-sm font-semibold text-blue-900 mb-2">Current Configuration</h3>
+                    <div className="text-sm text-blue-800 space-y-1">
+                      <p>Days in Year: <strong>{loanSettings.daysInYear}</strong></p>
+                      <p className="text-xs text-blue-600">
+                        Last updated: {new Date(loanSettings.updatedAt).toLocaleString()}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                  <h3 className="text-sm font-semibold text-gray-900 mb-2">How It Works</h3>
+                  <ul className="text-sm text-gray-600 space-y-2">
+                    <li>• <strong>Interest rates</strong> are set by financiers in their financing plans</li>
+                    <li>• <strong>Daily accrual job</strong> runs at 5 AM and uses each loan's plan interest rate</li>
+                    <li>• <strong>Formula:</strong> Daily Interest = Remaining Principal × (Annual Rate ÷ Days in Year ÷ 100)</li>
+                    <li>• <strong>Example:</strong> ₦10,000 principal at 15% annual with 365 days = ₦4.11/day</li>
+                  </ul>
+                </div>
+
+                <div className="flex gap-3">
+                  <Button
+                    type="submit"
+                    variant="primary"
+                    disabled={savingLoanSettings || daysInYear === loanSettings?.daysInYear}
+                  >
+                    {savingLoanSettings ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                        Saving...
+                      </>
+                    ) : (
+                      'Save Settings'
+                    )}
+                  </Button>
+                  {daysInYear !== loanSettings?.daysInYear && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setDaysInYear(loanSettings?.daysInYear || 365)}
+                    >
+                      Reset
+                    </Button>
+                  )}
+                </div>
+              </form>
+            </div>
+          )
+        ) : (
+          /* Integrations List */
+          loading ? (
+            <div className="flex items-center justify-center h-64">
+              <div className="text-center">
+                <Loader2 className="w-8 h-8 animate-spin text-blue-600 mx-auto mb-3" />
+                <p className="text-gray-600">Loading integrations...</p>
+              </div>
+            </div>
+          ) : currentIntegrations.length === 0 ? (
           <div className="text-center py-12 bg-white rounded-lg border border-gray-200">
             <p className="text-gray-500">No integrations configured yet</p>
             <Button
@@ -277,6 +397,7 @@ export default function Integrations() {
               </div>
             ))}
           </div>
+        )
         )}
 
         {/* Create Modal */}

@@ -35,12 +35,18 @@ export interface PaymentScheduleItem {
   lastAttemptAt?: Date;
 }
 
+export interface LateFee {
+  type: 'fixed' | 'percentage';
+  amount: number;
+}
+
 export interface LoanConfiguration {
   frequency: RepaymentFrequency;
   tenor: Tenor;
   numberOfInstallments: number;  // Calculated based on tenor and frequency
   interestRate: number;           // Annual percentage rate (e.g., 15 for 15%)
-  penaltyRate: number;            // Late payment penalty percentage
+  penaltyRate: number;            // DEPRECATED: Use lateFee instead
+  lateFee: LateFee;               // Late payment penalty (can be fixed amount or percentage)
   installmentAmount: number;
   totalInterest: number;
   totalAmount: number;            // Principal + Interest
@@ -83,6 +89,8 @@ export interface Loan {
 
   // Timestamps
   createdAt: Date;
+  updatedAt: Date;
+  bookingDate?: Date;        // Date when loan was booked/created
   activatedAt?: Date; // When card was authorized
   firstPaymentDate?: Date;
   lastPaymentDate?: Date;
@@ -97,8 +105,6 @@ export interface Loan {
 
   // Notes
   notes?: string;
-
-  updatedAt: Date;
 }
 
 export interface LoanStats {

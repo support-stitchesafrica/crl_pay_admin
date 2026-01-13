@@ -48,6 +48,9 @@ export class RepaymentScheduleService {
           lateFee: 0,
           totalDue: installmentAmount,
           retryCount: 0,
+          accruedInterest: 0,
+          remainingPrincipal: principalPerInstallment,
+          originalPrincipal: principalPerInstallment,
           createdAt: new Date(),
           updatedAt: new Date(),
         };
@@ -148,10 +151,12 @@ export class RepaymentScheduleService {
     const snapshot = await this.firestore
       .collection('crl_repayment_schedules')
       .where('loanId', '==', loanId)
-      .orderBy('installmentNumber', 'asc')
+      .orderBy('dueDate', 'asc')
       .get();
 
-    return snapshot.docs.map((doc) => {
+    return snapshot.docs
+      .filter(doc => doc.data().status !== 'deleted')
+      .map((doc) => {
       const data = doc.data();
       return {
         ...data,

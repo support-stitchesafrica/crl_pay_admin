@@ -15,6 +15,7 @@ import {
 import { ApiTags, ApiOperation, ApiResponse as ApiResponseDecorator, ApiBearerAuth } from '@nestjs/swagger';
 import { LoansService } from './loans.service';
 import { LiquidationService } from './liquidation.service';
+import { InterestAccrualService } from './interest-accrual.service';
 import { CreateLoanDto } from './dto/create-loan.dto';
 import { UpdateLoanDto, AuthorizeCardDto, RecordPaymentDto } from './dto/update-loan.dto';
 import { CalculateLiquidationDto, LiquidateLoanDto } from './dto/liquidation.dto';
@@ -29,6 +30,7 @@ export class LoansController {
   constructor(
     private readonly loansService: LoansService,
     private readonly liquidationService: LiquidationService,
+    private readonly interestAccrualService: InterestAccrualService,
   ) {}
 
   @Post()
@@ -253,6 +255,30 @@ export class LoansController {
     }
   }
 
+  @Get('liquidation/max-amount/:loanId')
+  @UseGuards(FlexibleAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Get maximum liquidation amount for a loan (JWT or API Key)' })
+  @ApiResponseDecorator({ status: 200, description: 'Maximum amount retrieved' })
+  @ApiResponseDecorator({ status: 404, description: 'Loan not found' })
+  @ApiResponseDecorator({ status: 401, description: 'Unauthorized - Provide JWT token or API key' })
+  async getMaxLiquidationAmount(@Param('loanId') loanId: string) {
+    try {
+      const calculation = await this.liquidationService.calculateLiquidation(loanId);
+      return ApiResponse.success(
+        {
+          loanId,
+          maxAmount: calculation.totalDue,
+          breakdown: calculation.breakdown,
+          isFullLiquidation: calculation.isFullLiquidation,
+        },
+        'Maximum liquidation amount retrieved',
+      );
+    } catch (error) {
+      return ApiResponse.error(error.message, error);
+    }
+  }
+
   @Post('liquidation/calculate')
   @UseGuards(FlexibleAuthGuard)
   @HttpCode(HttpStatus.OK)
@@ -291,6 +317,53 @@ export class LoansController {
         dto.method,
       );
       return ApiResponse.success(result, 'Liquidation processed successfully');
+    } catch (error) {
+      return ApiResponse.error(error.message, error);
+    }
+  }
+
+  @Post(':id/accrue-interest')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Manually trigger interest accrual for a loan (Admin only)' })
+  @ApiResponseDecorator({ status: 200, description: 'Interest accrued successfully' })
+  @ApiResponseDecorator({ status: 400, description: 'Invalid request' })
+  @ApiResponseDecorator({ status: 401, description: 'Unauthorized' })
+  async accrueInterest(@Param('id') loanId: string) {
+    try {
+      await this.interestAccrualService.accrueInterestForLoan(loanId);
+      return ApiResponse.success(null, 'Interest accrued successfully for loan');
+    } catch (error) {
+      return ApiResponse.error(error.message, error);
+    }
+  }
+
+  @Post('accrue-interest/all')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Trigger interest accrual for all active loans (Admin only)' })
+  @ApiResponseDecorator({ status: 200, description: 'Interest accrual triggered for all loans' })
+  @ApiResponseDecorator({ status: 401, description: 'Unauthorized' })
+  async accrueInterestForAllLoans() {
+    try {
+      await this.interestAccrualService.accrueInterestForAllLoans();
+      return ApiResponse.success(null, 'Interest accrual triggered for all active loans');
+    } catch (error) {
+      return ApiResponse.error(error.message, error);
+    }
+  }
+
+  @Post('accrue-interest/backfill')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Backfill missed accruals from activation date (Admin only)' })
+  @ApiResponseDecorator({ status: 200, description: 'Missed accruals backfilled successfully' })
+  @ApiResponseDecorator({ status: 401, description: 'Unauthorized' })
+  async backfillMissedAccruals() {
+    try {
+      await this.interestAccrualService.backfillMissedAccruals();
+      return ApiResponse.success(null, 'Missed accruals backfilled successfully');
     } catch (error) {
       return ApiResponse.error(error.message, error);
     }

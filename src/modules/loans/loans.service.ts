@@ -239,8 +239,29 @@ export class LoansService {
         .orderBy('createdAt', 'desc')
         .get();
 
-      const loans = loansSnapshot.docs.map((doc) => {
+      const loans = await Promise.all(loansSnapshot.docs.map(async (doc) => {
         const data = doc.data();
+        
+        // Fetch fresh payment schedules from crl_repayment_schedules collection, excluding deleted ones
+        const schedulesSnapshot = await this.firestore
+          .collection('crl_repayment_schedules')
+          .where('loanId', '==', data.loanId)
+          .orderBy('dueDate', 'asc')
+          .get();
+
+        const paymentSchedule = schedulesSnapshot.docs
+          .filter(doc => doc.data().status !== 'deleted')
+          .map((scheduleDoc) => {
+          const schedule = scheduleDoc.data();
+          return {
+            ...schedule,
+            dueDate: schedule.dueDate?.toDate ? schedule.dueDate.toDate() : new Date(schedule.dueDate),
+            paidAt: schedule.paidAt?.toDate ? schedule.paidAt.toDate() : schedule.paidAt,
+            lastAttemptAt: schedule.lastAttemptAt?.toDate ? schedule.lastAttemptAt.toDate() : schedule.lastAttemptAt,
+            lastAccrualDate: schedule.lastAccrualDate?.toDate ? schedule.lastAccrualDate.toDate() : schedule.lastAccrualDate,
+          };
+        });
+        
         return {
           ...data,
           createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(data.createdAt),
@@ -254,8 +275,9 @@ export class LoansService {
             : data.lastPaymentDate,
           completedAt: data.completedAt?.toDate ? data.completedAt.toDate() : data.completedAt,
           defaultedAt: data.defaultedAt?.toDate ? data.defaultedAt.toDate() : data.defaultedAt,
-        } as Loan;
-      });
+          paymentSchedule,
+        } as unknown as Loan;
+      }));
 
       this.logger.log(`Found ${loans.length} loans for customer ${email}`);
       return loans;
@@ -271,28 +293,52 @@ export class LoansService {
     status?: string;
     limit?: number;
   }): Promise<Loan[]> {
-    // Fetch all loans ordered by createdAt
+    // Fetch all loans ordered by bookingDate (or createdAt as fallback)
     // We filter in-memory to avoid Firestore composite index requirement
     const snapshot = await this.loansCollection.orderBy('createdAt', 'desc').get();
 
-    let loans = snapshot.docs.map((doc) => {
+    let loans = await Promise.all(snapshot.docs.map(async (doc) => {
       const data = doc.data();
+      
+      // Fetch fresh payment schedules from crl_repayment_schedules collection, excluding deleted ones
+      const schedulesSnapshot = await this.firestore
+        .collection('crl_repayment_schedules')
+        .where('loanId', '==', data.loanId)
+        .orderBy('dueDate', 'asc')
+        .get();
+
+      const paymentSchedule = schedulesSnapshot.docs
+        .filter(doc => doc.data().status !== 'deleted')
+        .map((scheduleDoc) => {
+        const schedule = scheduleDoc.data();
+        return {
+          ...schedule,
+          dueDate: schedule.dueDate?.toDate ? schedule.dueDate.toDate() : new Date(schedule.dueDate),
+          paidAt: schedule.paidAt?.toDate ? schedule.paidAt.toDate() : schedule.paidAt,
+          lastAttemptAt: schedule.lastAttemptAt?.toDate ? schedule.lastAttemptAt.toDate() : schedule.lastAttemptAt,
+          lastAccrualDate: schedule.lastAccrualDate?.toDate ? schedule.lastAccrualDate.toDate() : schedule.lastAccrualDate,
+        };
+      });
+
       return {
         ...data,
         createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(data.createdAt),
         updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate() : new Date(data.updatedAt),
+        bookingDate: data.bookingDate?.toDate ? data.bookingDate.toDate() : (data.createdAt?.toDate ? data.createdAt.toDate() : new Date(data.createdAt)),
         activatedAt: data.activatedAt?.toDate ? data.activatedAt.toDate() : data.activatedAt,
         firstPaymentDate: data.firstPaymentDate?.toDate ? data.firstPaymentDate.toDate() : data.firstPaymentDate,
         lastPaymentDate: data.lastPaymentDate?.toDate ? data.lastPaymentDate.toDate() : data.lastPaymentDate,
         completedAt: data.completedAt?.toDate ? data.completedAt.toDate() : data.completedAt,
         defaultedAt: data.defaultedAt?.toDate ? data.defaultedAt.toDate() : data.defaultedAt,
-        paymentSchedule: data.paymentSchedule?.map((p: any) => ({
-          ...p,
-          dueDate: p.dueDate?.toDate ? p.dueDate.toDate() : new Date(p.dueDate),
-          paidAt: p.paidAt?.toDate ? p.paidAt.toDate() : p.paidAt,
-          lastAttemptAt: p.lastAttemptAt?.toDate ? p.lastAttemptAt.toDate() : p.lastAttemptAt,
-        })) || [],
-      } as Loan;
+        paymentSchedule,
+      } as unknown as Loan;
+    }));
+
+    // Sort by bookingDate DESC (newest first)
+    loans.sort((a, b) => {
+      const dateA = a.bookingDate || a.createdAt;
+      const dateB = b.bookingDate || b.createdAt;
+      return dateB.getTime() - dateA.getTime();
     });
 
     // Apply filters in-memory
@@ -327,22 +373,39 @@ export class LoansService {
     }
 
     const data = doc.data() as any;
+
+    // Fetch fresh payment schedules from crl_repayment_schedules collection
+    const schedulesSnapshot = await this.firestore
+      .collection('crl_repayment_schedules')
+      .where('loanId', '==', loanId)
+      .orderBy('dueDate', 'asc')
+      .get();
+
+    const paymentSchedule = schedulesSnapshot.docs
+      .filter(doc => doc.data().status !== 'deleted')
+      .map((scheduleDoc) => {
+      const schedule = scheduleDoc.data();
+      return {
+        ...schedule,
+        dueDate: schedule.dueDate?.toDate ? schedule.dueDate.toDate() : new Date(schedule.dueDate),
+        paidAt: schedule.paidAt?.toDate ? schedule.paidAt.toDate() : schedule.paidAt,
+        lastAttemptAt: schedule.lastAttemptAt?.toDate ? schedule.lastAttemptAt.toDate() : schedule.lastAttemptAt,
+        lastAccrualDate: schedule.lastAccrualDate?.toDate ? schedule.lastAccrualDate.toDate() : schedule.lastAccrualDate,
+      };
+    });
+
     return {
       ...data,
       createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(data.createdAt),
       updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate() : new Date(data.updatedAt),
+      bookingDate: data.bookingDate?.toDate ? data.bookingDate.toDate() : (data.createdAt?.toDate ? data.createdAt.toDate() : new Date(data.createdAt)),
       activatedAt: data.activatedAt?.toDate ? data.activatedAt.toDate() : data.activatedAt,
       firstPaymentDate: data.firstPaymentDate?.toDate ? data.firstPaymentDate.toDate() : data.firstPaymentDate,
       lastPaymentDate: data.lastPaymentDate?.toDate ? data.lastPaymentDate.toDate() : data.lastPaymentDate,
       completedAt: data.completedAt?.toDate ? data.completedAt.toDate() : data.completedAt,
       defaultedAt: data.defaultedAt?.toDate ? data.defaultedAt.toDate() : data.defaultedAt,
-      paymentSchedule: data.paymentSchedule?.map((p: any) => ({
-        ...p,
-        dueDate: p.dueDate?.toDate ? p.dueDate.toDate() : new Date(p.dueDate),
-        paidAt: p.paidAt?.toDate ? p.paidAt.toDate() : p.paidAt,
-        lastAttemptAt: p.lastAttemptAt?.toDate ? p.lastAttemptAt.toDate() : p.lastAttemptAt,
-      })) || [],
-    } as Loan;
+      paymentSchedule,
+    } as unknown as Loan;
   }
 
   /**

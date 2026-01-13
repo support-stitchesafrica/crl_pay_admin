@@ -1,4 +1,4 @@
-export type RepaymentStatus = 'pending' | 'processing' | 'success' | 'failed' | 'overdue';
+export type RepaymentStatus = 'pending' | 'processing' | 'success' | 'failed' | 'overdue' | 'deleted';
 
 export type RepaymentMethod = 'auto_debit' | 'manual' | 'bank_transfer';
 
@@ -28,6 +28,12 @@ export interface RepaymentScheduleItem {
   retryCount: number;
   lastRetryAt?: Date;
   nextRetryAt?: Date;
+
+  // Daily interest accrual tracking
+  accruedInterest: number;           // Cumulative interest accrued via daily accrual job
+  lastAccrualDate?: Date;            // Last date interest was accrued
+  remainingPrincipal: number;        // Principal still owed (after partial payments)
+  originalPrincipal: number;         // Original principal amount at schedule creation
 
   metadata?: Record<string, any>;
 

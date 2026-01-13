@@ -15,7 +15,7 @@ import {
   X,
   ShoppingCart,
 } from 'lucide-react';
-import { getLoan, updateLoanStatus, updateLoanNotes } from '../services/loan.service';
+import { getLoan, updateLoanStatus, updateLoanNotes, triggerInterestAccrual, recordManualRepayment } from '../services/loan.service';
 import { Loan } from '../services/types/loan.types';
 import { showToast } from '../utils/toast';
 import DashboardLayout from '../components/DashboardLayout';
@@ -32,6 +32,13 @@ export default function LoanDetail() {
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [newStatus, setNewStatus] = useState('');
   const [statusNotes, setStatusNotes] = useState('');
+  const [showRepaymentModal, setShowRepaymentModal] = useState(false);
+  const [selectedSchedule, setSelectedSchedule] = useState<any>(null);
+  const [repaymentAmount, setRepaymentAmount] = useState('');
+  const [repaymentReference, setRepaymentReference] = useState('');
+  const [repaymentMethod, setRepaymentMethod] = useState('bank_transfer');
+  const [processingRepayment, setProcessingRepayment] = useState(false);
+  const [triggeringAccrual, setTriggeringAccrual] = useState(false);
 
   useEffect(() => {
     if (loanId) {
@@ -88,6 +95,49 @@ export default function LoanDetail() {
     }
   };
 
+  const handleTriggerAccrual = async () => {
+    if (!loanId) return;
+    
+    try {
+      setTriggeringAccrual(true);
+      await triggerInterestAccrual(loanId);
+      showToast.success('Interest accrual triggered successfully');
+      await fetchLoan(); // Refresh loan data
+    } catch (error: any) {
+      showToast.error(error.message || 'Failed to trigger interest accrual');
+    } finally {
+      setTriggeringAccrual(false);
+    }
+  };
+
+  const handleRecordRepayment = async () => {
+    if (!selectedSchedule || !repaymentAmount || !repaymentReference) {
+      showToast.error('Please fill in all required fields');
+      return;
+    }
+
+    try {
+      setProcessingRepayment(true);
+      await recordManualRepayment({
+        loanId: loanId!,
+        scheduleId: selectedSchedule.scheduleId,
+        amount: parseFloat(repaymentAmount),
+        reference: repaymentReference,
+        method: repaymentMethod,
+      });
+      showToast.success('Manual repayment recorded successfully');
+      setShowRepaymentModal(false);
+      setSelectedSchedule(null);
+      setRepaymentAmount('');
+      setRepaymentReference('');
+      await fetchLoan(); // Refresh loan data
+    } catch (error: any) {
+      showToast.error(error.message || 'Failed to record repayment');
+    } finally {
+      setProcessingRepayment(false);
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     const badges = {
       pending: 'bg-yellow-100 text-yellow-800',
@@ -127,16 +177,16 @@ export default function LoanDetail() {
     }).format(amount);
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-NG', {
+  const formatDate = (date: Date | string) => {
+    return new Date(date).toLocaleDateString('en-NG', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
     });
   };
 
-  const formatDateTime = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-NG', {
+  const formatDateTime = (date: Date | string) => {
+    return new Date(date).toLocaleDateString('en-NG', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -162,7 +212,10 @@ export default function LoanDetail() {
     return null;
   }
 
-  const progressPercentage = (loan.amountPaid / loan.configuration.totalAmount) * 100;
+  // For completed loans, show 100%. Otherwise calculate based on amount paid vs (paid + remaining)
+  const progressPercentage = loan.status === 'completed' 
+    ? 100 
+    : (loan.amountPaid / (loan.amountPaid + loan.amountRemaining)) * 100;
 
   return (
     <DashboardLayout>
@@ -176,7 +229,14 @@ export default function LoanDetail() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Loan Details</h1>
-            <p className="text-gray-600 mt-1">Loan ID: {loan.loanId}</p>
+            <div className="mt-1 space-y-1">
+              {loan.loanAccountNumber && (
+                <p className="text-lg font-mono font-semibold text-blue-600">
+                  Account: {loan.loanAccountNumber}
+                </p>
+              )}
+              <p className="text-sm text-gray-600">Loan ID: {loan.loanId}</p>
+            </div>
           </div>
           <div className="flex items-center gap-3">
             <span
@@ -185,6 +245,13 @@ export default function LoanDetail() {
               {getStatusIcon(loan.status)}
               {loan.status.charAt(0).toUpperCase() + loan.status.slice(1)}
             </span>
+            <button
+              onClick={handleTriggerAccrual}
+              disabled={triggeringAccrual}
+              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {triggeringAccrual ? 'Processing...' : 'Trigger Accrual'}
+            </button>
             <button
               onClick={() => setShowStatusModal(true)}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
@@ -245,6 +312,71 @@ export default function LoanDetail() {
             </div>
           </div>
 
+          {/* Liquidation Information */}
+          {loan.status === 'active' && (
+            <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 rounded-lg shadow p-6">
+              <h2 className="text-xl font-semibold text-green-900 mb-2">💰 Liquidation Information</h2>
+              <p className="text-sm text-green-700 mb-4">
+                Customer can pay off this loan early via liquidation (full or partial)
+              </p>
+              
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                <div className="bg-white rounded-lg p-3 border border-green-200">
+                  <p className="text-xs text-gray-600 mb-1">Unpaid Principal</p>
+                  <p className="text-lg font-bold text-gray-900">
+                    {formatCurrency(
+                      loan.paymentSchedule
+                        .filter(p => p.status === 'pending')
+                        .reduce((sum, p) => sum + (p.remainingPrincipal || p.principalAmount), 0)
+                    )}
+                  </p>
+                </div>
+                <div className="bg-white rounded-lg p-3 border border-orange-200">
+                  <p className="text-xs text-gray-600 mb-1">Accrued Interest</p>
+                  <p className="text-lg font-bold text-orange-600">
+                    {formatCurrency(
+                      loan.paymentSchedule
+                        .filter(p => p.status === 'pending')
+                        .reduce((sum, p) => sum + (p.accruedInterest || 0), 0)
+                    )}
+                  </p>
+                </div>
+                <div className="bg-white rounded-lg p-3 border border-red-200">
+                  <p className="text-xs text-gray-600 mb-1">Late Fees</p>
+                  <p className="text-lg font-bold text-red-600">
+                    {formatCurrency(
+                      loan.paymentSchedule
+                        .filter(p => p.status === 'pending')
+                        .reduce((sum, p) => sum + (p.lateFee || 0), 0)
+                    )}
+                  </p>
+                </div>
+                <div className="bg-white rounded-lg p-3 border border-green-300">
+                  <p className="text-xs text-gray-600 mb-1">Total Liquidation</p>
+                  <p className="text-lg font-bold text-green-700">
+                    {formatCurrency(
+                      loan.paymentSchedule
+                        .filter(p => p.status === 'pending')
+                        .reduce((sum, p) => 
+                          sum + (p.remainingPrincipal || p.principalAmount) + (p.accruedInterest || 0) + (p.lateFee || 0), 0
+                        )
+                    )}
+                  </p>
+                </div>
+              </div>
+              
+              <div className="bg-white rounded-lg p-3 border border-green-200">
+                <p className="text-xs text-green-700 mb-2">
+                  <strong>Payment Priority:</strong> Penalties → Interest → Principal
+                </p>
+                <p className="text-xs text-gray-600">
+                  Interest accrues daily at {loan.configuration.interestRate}% annual rate. 
+                  Customer can liquidate via demo-store or liquidation page.
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* Payment Configuration */}
           <div className="bg-white rounded-lg shadow p-6">
             <h2 className="text-xl font-semibold text-gray-900 mb-4">Payment Configuration</h2>
@@ -296,66 +428,132 @@ export default function LoanDetail() {
 
           {/* Payment Schedule */}
           <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Payment Schedule</h2>
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">Repayment Schedule</h2>
+            <p className="text-sm text-gray-600 mb-4">
+              Daily interest accrual runs at 5 AM. Accrued interest is calculated on remaining principal.
+            </p>
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                       #
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                       Due Date
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                      Amount
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                       Principal
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      Remaining
+                    </th>
+                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                       Interest
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      Accrued
+                    </th>
+                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      Late Fee
+                    </th>
+                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      Paid
+                    </th>
+                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                       Status
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                      Paid At
+                    <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase">
+                      Actions
                     </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {loan.paymentSchedule.map((payment) => (
                     <tr key={payment.installmentNumber} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                      <td className="px-3 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
                         {payment.installmentNumber}
                       </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                      <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-900">
                         {formatDate(payment.dueDate)}
                       </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
-                        {formatCurrency(payment.amount)}
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
+                      <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-900">
                         {formatCurrency(payment.principalAmount)}
                       </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
+                      <td className="px-3 py-3 whitespace-nowrap text-sm font-medium text-blue-600">
+                        {formatCurrency(payment.remainingPrincipal || payment.principalAmount)}
+                      </td>
+                      <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-600">
                         {formatCurrency(payment.interestAmount)}
                       </td>
-                      <td className="px-4 py-3 whitespace-nowrap">
+                      <td className="px-3 py-3 whitespace-nowrap text-sm font-medium text-orange-600">
+                        {formatCurrency(payment.accruedInterest || 0)}
+                      </td>
+                      <td className="px-3 py-3 whitespace-nowrap text-sm text-red-600">
+                        {payment.lateFee ? formatCurrency(payment.lateFee) : '-'}
+                      </td>
+                      <td className="px-3 py-3 whitespace-nowrap text-sm text-green-600">
+                        {payment.paidAmount ? formatCurrency(payment.paidAmount) : '-'}
+                      </td>
+                      <td className="px-3 py-3 whitespace-nowrap">
                         <span
                           className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getPaymentStatusBadge(payment.status)}`}
                         >
                           {payment.status.charAt(0).toUpperCase() + payment.status.slice(1)}
                         </span>
                       </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
-                        {payment.paidAt ? formatDateTime(payment.paidAt) : '-'}
+                      <td className="px-3 py-3 whitespace-nowrap text-right text-sm">
+                        {payment.status === 'pending' && (
+                          <button
+                            onClick={() => {
+                              setSelectedSchedule(payment);
+                              setRepaymentAmount(payment.amount.toString());
+                              setShowRepaymentModal(true);
+                            }}
+                            className="text-blue-600 hover:text-blue-900 font-medium"
+                          >
+                            Record Payment
+                          </button>
+                        )}
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
+            </div>
+            
+            {/* Schedule Summary */}
+            <div className="mt-4 pt-4 border-t border-gray-200">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div>
+                  <p className="text-xs text-gray-600">Total Accrued Interest</p>
+                  <p className="text-sm font-semibold text-orange-600">
+                    {formatCurrency(
+                      loan.paymentSchedule.reduce((sum, p) => sum + (p.accruedInterest || 0), 0)
+                    )}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-600">Total Late Fees</p>
+                  <p className="text-sm font-semibold text-red-600">
+                    {formatCurrency(
+                      loan.paymentSchedule.reduce((sum, p) => sum + (p.lateFee || 0), 0)
+                    )}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-600">Pending Installments</p>
+                  <p className="text-sm font-semibold text-blue-600">
+                    {loan.paymentSchedule.filter(p => p.status === 'pending').length}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-600">Paid Installments</p>
+                  <p className="text-sm font-semibold text-green-600">
+                    {loan.paymentSchedule.filter(p => p.status === 'paid').length}
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -417,7 +615,16 @@ export default function LoanDetail() {
           {/* Merchant Information */}
           <div className="bg-white rounded-lg shadow p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Merchant Information</h3>
-            <div className="space-y-3">
+            <div className="space-y-4">
+              <div className="flex items-center gap-3 text-gray-600">
+                <Calendar className="w-5 h-5" />
+                <div>
+                  <p className="text-xs text-gray-500">Booking Date</p>
+                  <p className="text-sm font-medium text-gray-900">
+                    {formatDateTime((loan.bookingDate || loan.createdAt).toString())}
+                  </p>
+                </div>
+              </div>
               <div className="flex items-start gap-2">
                 <User className="w-5 h-5 text-gray-400 mt-0.5" />
                 <div>
@@ -647,7 +854,86 @@ export default function LoanDetail() {
                   setNewStatus('');
                   setStatusNotes('');
                 }}
-                className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+                className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Manual Repayment Modal */}
+      {showRepaymentModal && selectedSchedule && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              Record Manual Payment - Installment #{selectedSchedule.installmentNumber}
+            </h3>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Amount (₦)
+                </label>
+                <input
+                  type="number"
+                  value={repaymentAmount}
+                  onChange={(e) => setRepaymentAmount(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Enter amount"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Due: {formatCurrency(selectedSchedule.amount)}
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Payment Reference
+                </label>
+                <input
+                  type="text"
+                  value={repaymentReference}
+                  onChange={(e) => setRepaymentReference(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="e.g., BANK_TRANSFER_123456"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Payment Method
+                </label>
+                <select
+                  value={repaymentMethod}
+                  onChange={(e) => setRepaymentMethod(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="bank_transfer">Bank Transfer</option>
+                  <option value="cash">Cash</option>
+                  <option value="check">Check</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 mt-6">
+              <button
+                onClick={handleRecordRepayment}
+                disabled={processingRepayment || !repaymentAmount || !repaymentReference}
+                className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {processingRepayment ? 'Processing...' : 'Record Payment'}
+              </button>
+              <button
+                onClick={() => {
+                  setShowRepaymentModal(false);
+                  setSelectedSchedule(null);
+                  setRepaymentAmount('');
+                  setRepaymentReference('');
+                }}
+                className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300"
               >
                 Cancel
               </button>

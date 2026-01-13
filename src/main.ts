@@ -65,9 +65,42 @@ async function bootstrap() {
 
   // CORS configuration
   app.enableCors({
-    origin: process.env.CORS_ORIGIN?.split(',') || ['http://localhost:3007', 'http://localhost:3008', 'http://localhost:3009', 'http://localhost:3010'],
-    methods: process.env.CORS_METHODS || 'GET,HEAD,PUT,PATCH,POST,DELETE',
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like mobile apps, curl, or local HTML files)
+      if (!origin) {
+        return callback(null, true);
+      }
+      
+      // Get allowed origins from env or use defaults
+      const allowedOrigins = process.env.CORS_ORIGIN?.split(',') || [
+        'http://localhost:3007',
+        'http://localhost:3008', 
+        'http://localhost:3009',
+        'http://localhost:3010',
+        'http://localhost:3001', // customer-webview
+      ];
+      
+      // In development, allow all localhost origins
+      if (process.env.NODE_ENV !== 'production' && origin && origin.includes('localhost')) {
+        return callback(null, true);
+      }
+      
+      // Check if origin is in allowed list
+      if (allowedOrigins.indexOf(origin) !== -1) {
+        return callback(null, true);
+      }
+      
+      // For development, be more permissive
+      if (process.env.NODE_ENV !== 'production') {
+        return callback(null, true);
+      }
+      
+      // Reject in production if not in allowed list
+      callback(new Error('Not allowed by CORS'));
+    },
+    methods: process.env.CORS_METHODS || 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: process.env.CORS_CREDENTIALS === 'true',
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-api-key'],
   });
 
   // Global exception filter

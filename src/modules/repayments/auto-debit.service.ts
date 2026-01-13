@@ -191,7 +191,21 @@ export class AutoDebitService {
   }
 
   private calculateLateFee(loan: any, installmentAmount: number): number {
-    const penaltyRate = loan.penaltyRate || 5;
+    // Use lateFee object if available, otherwise fall back to old penaltyRate
+    const lateFee = loan.configuration?.lateFee;
+    
+    if (lateFee) {
+      if (lateFee.type === 'fixed') {
+        // Fixed amount late fee
+        return lateFee.amount;
+      } else {
+        // Percentage-based late fee
+        return Math.ceil((installmentAmount * lateFee.amount) / 100);
+      }
+    }
+    
+    // Fallback to old penaltyRate for backward compatibility
+    const penaltyRate = loan.configuration?.penaltyRate || 5;
     return Math.ceil((installmentAmount * penaltyRate) / 100);
   }
 

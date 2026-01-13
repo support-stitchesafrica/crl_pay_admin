@@ -22,6 +22,7 @@ import {
   UpdateIntegrationDto,
   SetActiveIntegrationDto,
 } from './dto/integration.dto';
+import { UpdateLoanSettingsDto } from '../admin/dto/loan-settings.dto';
 
 @ApiTags('Admin - Integrations')
 @Controller('admin/integrations')
@@ -182,6 +183,32 @@ export class IntegrationsController {
     try {
       const settings = await this.integrationsService.setActiveRepaymentIntegration(dto);
       return ApiResponse.success(settings, 'Active repayment integration set');
+    } catch (error) {
+      return ApiResponse.error(error.message, error);
+    }
+  }
+
+  @Get('settings/loans')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Get loan settings (Admin only)' })
+  @ApiResponseDecorator({ status: 200, description: 'Loan settings retrieved' })
+  async getLoanSettings() {
+    try {
+      const settings = await this.integrationsService.getLoanSettings();
+      return ApiResponse.success(settings, 'Loan settings retrieved');
+    } catch (error) {
+      return ApiResponse.error(error.message, error);
+    }
+  }
+
+  @Put('settings/loans')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Update loan settings (Admin only)' })
+  @ApiResponseDecorator({ status: 200, description: 'Loan settings updated' })
+  async updateLoanSettings(@Body() dto: UpdateLoanSettingsDto) {
+    try {
+      const settings = await this.integrationsService.updateLoanSettings(dto.daysInYear);
+      return ApiResponse.success(settings, 'Loan settings updated successfully');
     } catch (error) {
       return ApiResponse.error(error.message, error);
     }
