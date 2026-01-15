@@ -67,6 +67,8 @@ export interface Loan {
   loanAccountNumber: string; // Human-readable 10-digit alphanumeric account number
   merchantId: string;
   customerId: string;
+  financingPlanId?: string; // Which financing plan was used for this loan
+  financierId?: string; // Which financier funded this loan
 
   // Loan Details
   principalAmount: number;

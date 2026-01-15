@@ -204,7 +204,7 @@ export default function Dashboard() {
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-gray-200">
-                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Loan ID</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Account Number</th>
                     <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Amount</th>
                     <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Status</th>
                     <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Date</th>
@@ -214,7 +214,7 @@ export default function Dashboard() {
                 <tbody>
                   {recentLoans.map((loan) => (
                     <tr key={loan.loanId} className="border-b border-gray-100 hover:bg-gray-50">
-                      <td className="py-3 px-4 text-sm text-gray-900 font-mono">{loan.loanId.slice(0, 8)}...</td>
+                      <td className="py-3 px-4 text-sm text-gray-900 font-mono">{loan.loanAccountNumber || loan.loanId.slice(0, 8) + '...'}</td>
                       <td className="py-3 px-4 text-sm font-semibold text-gray-900">
                         {formatCurrency(loan.principalAmount)}
                       </td>

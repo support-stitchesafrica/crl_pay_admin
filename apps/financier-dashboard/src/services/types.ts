@@ -29,6 +29,7 @@ export interface Financier {
   allocatedFunds: number;
   totalDisbursed: number;
   totalRepaid: number;
+  totalInterestRepaid?: number;
   settlementAccount?: {
     bankName: string;
     accountNumber: string;
@@ -81,6 +82,7 @@ export interface FinancingPlan {
   expiresAt?: string | { _seconds: number; _nanoseconds: number };
   totalFundsAllocated: number;
   fundsAllocatedToMerchants?: number;
+  totalUsage?: number;
   totalLoansCreated: number;
   createdAt: string | { _seconds: number; _nanoseconds: number };
   updatedAt: string | { _seconds: number; _nanoseconds: number };
@@ -138,6 +140,7 @@ export interface UpdatePlanData {
 // Loan Types
 export interface Loan {
   loanId: string;
+  loanAccountNumber?: string;
   customerId: string;
   merchantId: string;
   financierId: string;

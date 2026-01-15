@@ -240,24 +240,25 @@ export default function LoanDetail() {
           </div>
           <div className="flex items-center gap-3">
             <span
-              className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium ${getStatusBadge(loan.status)}`}
-            >
+             className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium ${getStatusBadge(loan.status)}`}>
               {getStatusIcon(loan.status)}
               {loan.status.charAt(0).toUpperCase() + loan.status.slice(1)}
             </span>
-            <button
-              onClick={handleTriggerAccrual}
-              disabled={triggeringAccrual}
-              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {triggeringAccrual ? 'Processing...' : 'Trigger Accrual'}
-            </button>
-            <button
+            {loan.status !== 'completed' && (
+              <button
+                onClick={handleTriggerAccrual}
+                disabled={triggeringAccrual}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {triggeringAccrual ? 'Processing...' : 'Trigger Accrual'}
+              </button>
+            )}
+            {/* <button
               onClick={() => setShowStatusModal(true)}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
             >
               Update Status
-            </button>
+            </button> */}
           </div>
         </div>
       </div>

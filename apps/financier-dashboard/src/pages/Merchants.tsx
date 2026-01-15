@@ -187,13 +187,13 @@ export default function Merchants() {
                     <p className="text-lg font-bold text-blue-600">{formatCurrency(mapping.fundsAllocated)}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-gray-500 mb-1">Current Usage</p>
-                    <p className="text-lg font-bold text-orange-600">{formatCurrency(mapping.currentAllocation)}</p>
+                    <p className="text-xs text-gray-500 mb-1">Total Disbursed</p>
+                    <p className="text-lg font-bold text-orange-600">{formatCurrency(mapping.totalDisbursed)}</p>
                   </div>
                   <div>
                     <p className="text-xs text-gray-500 mb-1">Available</p>
                     <p className="text-lg font-bold text-green-600">
-                      {formatCurrency(mapping.fundsAllocated - mapping.currentAllocation)}
+                      {formatCurrency(mapping.fundsAllocated - mapping.totalDisbursed)}
                     </p>
                   </div>
                   <div>
@@ -201,7 +201,7 @@ export default function Merchants() {
                     <div className="flex items-center gap-2">
                       <TrendingUp className="w-4 h-4 text-purple-600" />
                       <p className="text-lg font-bold text-purple-600">
-                        {getUtilizationPercentage(mapping.currentAllocation, mapping.fundsAllocated)}%
+                        {getUtilizationPercentage(mapping.totalDisbursed, mapping.fundsAllocated)}%
                       </p>
                     </div>
                   </div>

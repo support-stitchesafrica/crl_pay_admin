@@ -1,5 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Customer } from '../../entities/customer.entity';
+import { YouverifyService } from '../verification/youverify.service';
+import { DuplicateDetectionService } from './duplicate-detection.service';
 
 interface ScoringComponents {
   identityScore: number;
@@ -23,11 +25,17 @@ interface ScoringResult {
   decisionReasons: string[];
   riskFlags: string[];
   recommendations: string[];
+  verificationData?: any;
 }
 
 @Injectable()
 export class CreditScoringService {
   private readonly logger = new Logger(CreditScoringService.name);
+
+  constructor(
+    private readonly youverifyService: YouverifyService,
+    private readonly duplicateDetectionService: DuplicateDetectionService,
+  ) {}
 
   /**
    * Main credit scoring algorithm
@@ -53,7 +61,12 @@ export class CreditScoringService {
     const recommendations: string[] = [];
 
     // 1. Identity Verification Score (0-200)
-    const { identityScore, bvnScore } = this.assessIdentity(customer, decisionReasons, riskFlags);
+    const { identityScore, bvnScore, verificationData } = await this.assessIdentity(
+      customer,
+      merchantId,
+      decisionReasons,
+      riskFlags,
+    );
 
     // 2. Behavioral Intelligence Score (0-200)
     const { behavioralScore, deviceScore, locationScore } = this.assessBehavior(
@@ -140,37 +153,98 @@ export class CreditScoringService {
       decisionReasons,
       riskFlags,
       recommendations,
+      verificationData, // Include verification data for storage
     };
   }
 
   /**
    * 1. Identity Verification (0-200)
    */
-  private assessIdentity(
+  private async assessIdentity(
     customer: Customer,
+    merchantId: string,
     decisionReasons: string[],
     riskFlags: string[],
-  ): { identityScore: number; bvnScore: number } {
+  ): Promise<{ identityScore: number; bvnScore: number; verificationData?: any }> {
     let identityScore = 0;
     let bvnScore = 0;
+    let verificationData: any = null;
 
     // BVN Verification (0-100)
     if (customer.bvn && customer.bvn.length === 11) {
-      bvnScore = 100;
-      identityScore += 100;
-      decisionReasons.push('BVN verified successfully');
+      try {
+        // Perform real BVN verification with Youverify
+        const verification = await this.youverifyService.verifyBvn(
+          customer.bvn,
+          customer.customerId,
+          merchantId,
+        );
+
+        if (verification.verified) {
+          // Check if names match
+          const nameMatch = this.youverifyService.compareNames(
+            customer.firstName,
+            customer.lastName,
+            verification.data.firstName,
+            verification.data.lastName,
+          );
+
+          if (nameMatch.score >= 70) {
+            bvnScore = 100;
+            identityScore += 100;
+            decisionReasons.push(`BVN verified successfully - ${nameMatch.reason}`);
+            
+            // Check watchlist status
+            if (verification.data.watchListed) {
+              riskFlags.push('Customer is on watchlist');
+              identityScore -= 50; // Penalty for watchlisted individuals
+            }
+          } else {
+            bvnScore = 50;
+            identityScore += 50;
+            riskFlags.push(`BVN name mismatch - ${nameMatch.reason}`);
+            decisionReasons.push('BVN verified but name does not match');
+          }
+
+          verificationData = verification;
+        } else {
+          riskFlags.push('BVN verification failed');
+          decisionReasons.push('BVN verification failed with provider');
+        }
+      } catch (error) {
+        this.logger.error('BVN verification error:', error);
+        riskFlags.push('BVN verification error');
+        decisionReasons.push('BVN verification encountered an error');
+      }
     } else {
-      riskFlags.push('BVN not verified');
-      decisionReasons.push('BVN verification failed');
+      riskFlags.push('BVN not provided or invalid');
+      decisionReasons.push('BVN not provided or invalid format');
     }
 
     // Duplicate Check (0-100)
-    // In production, this would check for duplicate customers across email, phone, BVN, device
-    // For now, assume pass
-    identityScore += 100;
-    decisionReasons.push('No duplicate accounts detected');
+    try {
+      const duplicateCheck = await this.duplicateDetectionService.checkForDuplicates(customer);
+      
+      identityScore += duplicateCheck.duplicateScore;
+      
+      if (duplicateCheck.hasDuplicates) {
+        duplicateCheck.duplicateReasons.forEach((reason) => decisionReasons.push(reason));
+        duplicateCheck.riskFlags.forEach((flag) => riskFlags.push(flag));
+        
+        this.logger.warn(
+          `Duplicates detected for customer ${customer.customerId}: ${duplicateCheck.duplicateCount} matches`,
+        );
+      } else {
+        decisionReasons.push('No duplicate accounts detected');
+      }
+    } catch (error) {
+      this.logger.error('Duplicate detection error:', error);
+      // Give partial score if duplicate check fails
+      identityScore += 50;
+      decisionReasons.push('Duplicate check completed with warnings');
+    }
 
-    return { identityScore, bvnScore };
+    return { identityScore, bvnScore, verificationData };
   }
 
   /**

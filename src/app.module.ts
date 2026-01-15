@@ -19,6 +19,8 @@ import { DisbursementsModule } from './modules/disbursements/disbursements.modul
 import { ProviderWebhooksModule } from './modules/provider-webhooks/provider-webhooks.module';
 import { IntegrationsModule } from './modules/integrations/integrations.module';
 import { RepaymentsModule } from './modules/repayments/repayments.module';
+import { AuditModule } from './modules/audit/audit.module';
+import { TransactionsModule } from './modules/transactions/transactions.module';
 
 @Module({
   imports: [
@@ -43,6 +45,8 @@ import { RepaymentsModule } from './modules/repayments/repayments.module';
     ProviderWebhooksModule,
     IntegrationsModule,
     RepaymentsModule,
+    AuditModule,
+    TransactionsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

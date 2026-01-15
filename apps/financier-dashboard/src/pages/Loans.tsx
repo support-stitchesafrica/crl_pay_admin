@@ -215,13 +215,13 @@ export default function Loans() {
                         {formatCurrency(loan.principalAmount)}
                       </td>
                       <td className="py-3 px-4 text-sm font-semibold text-gray-900">
-                        {formatCurrency(loan.totalAmount)}
+                        {formatCurrency((loan as any).configuration?.totalAmount || 0)}
                       </td>
                       <td className="py-3 px-4 text-sm text-green-600 font-medium">
-                        {formatCurrency(loan.amountPaid)}
+                        {formatCurrency(loan.amountPaid || 0)}
                       </td>
                       <td className="py-3 px-4 text-sm text-orange-600 font-medium">
-                        {formatCurrency(loan.amountRemaining)}
+                        {formatCurrency(loan.amountRemaining || 0)}
                       </td>
                       <td className="py-3 px-4">{getStatusBadge(loan.status)}</td>
                       <td className="py-3 px-4 text-sm text-gray-600">{formatTimestamp(loan.createdAt)}</td>

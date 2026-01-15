@@ -69,11 +69,20 @@ export class AnalyticsService {
     const collectionRate = totalDisbursed > 0 ? (totalCollected / totalDisbursed) * 100 : 0;
     const defaultRate = loans.length > 0 ? (defaultedLoans.length / loans.length) * 100 : 0;
 
-    // Calculate revenue
-    const totalInterest = completedLoans.reduce(
-      (sum, l) => sum + (l.configuration?.totalInterest || 0),
-      0,
-    );
+    // Calculate revenue - use actual interest earned, not projected
+    // For completed loans: Interest Earned = Amount Paid - Principal Amount
+    // For active/other loans: Use accrued interest from payment schedules
+    const totalInterest = loans.reduce((sum, l) => {
+      if (l.status === 'completed') {
+        // Actual interest earned = total paid - principal
+        return sum + Math.max(0, (l.amountPaid || 0) - (l.principalAmount || 0));
+      } else {
+        // For active loans, sum up interest from paid schedules
+        const paidSchedules = (l.paymentSchedule || []).filter(s => s.status === 'paid');
+        const interestFromPaidSchedules = paidSchedules.reduce((scheduleSum, s) => scheduleSum + (s.interestAmount || 0), 0);
+        return sum + interestFromPaidSchedules;
+      }
+    }, 0);
     const totalLateFees = loans.reduce((sum, l) => sum + (l.lateFees || 0), 0);
     const totalRevenue = totalInterest + totalLateFees;
 

@@ -329,7 +329,7 @@ export default function Customers() {
                               {customer.firstName} {customer.lastName}
                             </div>
                             <div className="text-xs text-gray-500">
-                              {customer.city}, {customer.state}
+                              {(customer as any).merchantName ? `${(customer as any).merchantName} • ` : ''}{customer.city}, {customer.state}
                             </div>
                           </div>
                         </div>
@@ -609,7 +609,7 @@ export default function Customers() {
                           Date of Birth
                         </label>
                         <p className="text-gray-900 mt-1">
-                          {(viewModal.customer as any).dateOfBirth}
+                          {formatTimestamp((viewModal.customer as any).dateOfBirth)}
                         </p>
                       </div>
                     )}
@@ -642,13 +642,31 @@ export default function Customers() {
                   </div>
                 </div>
 
+                {/* Merchant Information */}
+                {(viewModal.customer as any).merchantName && (
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                      <CheckCircle className="w-5 h-5 text-gray-600" />
+                      Merchant
+                    </h4>
+                    <div>
+                      <label className="text-xs font-medium text-gray-500 uppercase">
+                        Merchant Name
+                      </label>
+                      <p className="text-gray-900 mt-1 font-medium">
+                        {(viewModal.customer as any).merchantName}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
                 {/* Credit Information */}
                 <div className="bg-gray-50 rounded-lg p-4">
                   <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
                     <CreditCard className="w-5 h-5 text-gray-600" />
-                    Credit Information
+                    Loan Statistics
                   </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <div>
                       <label className="text-xs font-medium text-gray-500 uppercase">
                         Credit Score
@@ -659,10 +677,18 @@ export default function Customers() {
                     </div>
                     <div>
                       <label className="text-xs font-medium text-gray-500 uppercase">
+                        Total Loans
+                      </label>
+                      <p className="text-purple-600 text-lg font-semibold mt-1">
+                        {(viewModal.customer as any).totalLoans || 0}
+                      </p>
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-gray-500 uppercase">
                         Active Loans
                       </label>
                       <p className="text-orange-600 text-lg font-semibold mt-1">
-                        {viewModal.customer.activeLoans}
+                        {viewModal.customer.activeLoans || 0}
                       </p>
                     </div>
                     <div>
@@ -670,7 +696,7 @@ export default function Customers() {
                         Completed Loans
                       </label>
                       <p className="text-green-600 text-lg font-semibold mt-1">
-                        {viewModal.customer.completedLoans}
+                        {viewModal.customer.completedLoans || 0}
                       </p>
                     </div>
                   </div>

@@ -32,6 +32,31 @@ export class LoansService {
         throw new BadRequestException('Merchant ID is required');
       }
 
+      // Fetch active plan mapping for this merchant to get financingPlanId
+      let financingPlanId: string | undefined;
+      let financierId: string | undefined;
+      
+      try {
+        const mappingsSnapshot = await this.firestore
+          .collection('crl_plan_merchant_mappings')
+          .where('merchantId', '==', createLoanDto.merchantId)
+          .where('status', '==', 'active')
+          .limit(1)
+          .get();
+
+        if (!mappingsSnapshot.empty) {
+          const mapping = mappingsSnapshot.docs[0].data();
+          financingPlanId = mapping.planId;
+          financierId = mapping.financierId;
+          this.logger.log(`Loan will be linked to financing plan: ${financingPlanId}`);
+        } else {
+          this.logger.warn(`No active plan mapping found for merchant: ${createLoanDto.merchantId}`);
+        }
+      } catch (error) {
+        this.logger.error(`Error fetching plan mapping: ${error.message}`);
+        // Continue without plan mapping - loan can still be created
+      }
+
       // Validate tenor and frequency combination
       const validation = this.loanCalculator.validateTenorFrequencyCombination(
         createLoanDto.tenor,
@@ -67,6 +92,8 @@ export class LoansService {
         loanAccountNumber,
         merchantId: createLoanDto.merchantId,
         customerId: createLoanDto.customerId,
+        financingPlanId,
+        financierId,
         principalAmount: createLoanDto.principalAmount,
         configuration: plainConfiguration,
         paymentSchedule: plainPaymentSchedule,
@@ -444,6 +471,44 @@ export class LoansService {
     this.logger.log(`Loan cancelled: ${loanId}`);
 
     return { ...loan, ...updatedLoan } as Loan;
+  }
+
+  /**
+   * Get global loan statistics (for admin dashboard)
+   */
+  async getGlobalStats(): Promise<{
+    totalLoans: number;
+    activeLoans: number;
+    completedLoans: number;
+    defaultedLoans: number;
+    totalValue: number;
+  }> {
+    try {
+      const loansSnapshot = await this.firestore.collection('crl_loans').get();
+
+      const stats = {
+        totalLoans: 0,
+        activeLoans: 0,
+        completedLoans: 0,
+        defaultedLoans: 0,
+        totalValue: 0,
+      };
+
+      loansSnapshot.forEach((doc) => {
+        const loan = doc.data();
+        stats.totalLoans++;
+        stats.totalValue += loan.principalAmount || 0;
+
+        if (loan.status === 'active') stats.activeLoans++;
+        else if (loan.status === 'completed') stats.completedLoans++;
+        else if (loan.status === 'defaulted') stats.defaultedLoans++;
+      });
+
+      return stats;
+    } catch (error) {
+      this.logger.error('Error calculating global loan stats:', error);
+      throw error;
+    }
   }
 
   /**

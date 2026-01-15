@@ -6,8 +6,10 @@ import { AllExceptionsFilter } from './common/filters/http-exception.filter';
 import { WinstonModule } from 'nest-winston';
 import * as winston from 'winston';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
+import { AuditInterceptor } from './common/interceptors/audit.interceptor';
 import { ValidationPipe } from '@nestjs/common';
 import { AuthService } from './modules/auth/auth.service';
+import { AuditService } from './modules/audit/audit.service';
 
 async function bootstrap() {
   dotenv.config();
@@ -60,8 +62,14 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/v1/swagger-ui', app, document);
 
+  // Get AuditService instance
+  const auditService = app.get(AuditService);
+
   // Apply global HTTP request logging interceptor
   app.useGlobalInterceptors(new LoggingInterceptor());
+  
+  // Apply global audit interceptor
+  app.useGlobalInterceptors(new AuditInterceptor(auditService));
 
   // CORS configuration
   app.enableCors({

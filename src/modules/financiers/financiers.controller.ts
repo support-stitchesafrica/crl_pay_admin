@@ -19,6 +19,7 @@ import { LoginFinancierDto } from './dto/login-financier.dto';
 import { UpdateFinancierProfileDto } from './dto/update-profile.dto';
 import { CreateFinancingPlanDto } from './dto/create-plan.dto';
 import { UpdateFinancingPlanDto } from './dto/update-plan.dto';
+import { ApiResponse } from '../../common/helpers/response.helper';
 
 @ApiTags('Financiers')
 @Controller('financiers')
@@ -121,7 +122,8 @@ export class FinanciersController {
   @ApiOperation({ summary: 'Get all loans using financier plans' })
   async getLoans(@Request() req) {
     const financierId = req.user?.sub || req.user?.financierId;
-    return this.plansService.getLoans(financierId);
+    const loans = await this.plansService.getLoans(financierId);
+    return ApiResponse.success(loans, 'Loans retrieved successfully');
   }
 
   @Get('me/analytics')
@@ -130,7 +132,8 @@ export class FinanciersController {
   @ApiOperation({ summary: 'Get financier analytics' })
   async getAnalytics(@Request() req) {
     const financierId = req.user?.sub || req.user?.financierId;
-    return this.plansService.getAnalytics(financierId);
+    const analytics = await this.plansService.getAnalytics(financierId);
+    return ApiResponse.success(analytics, 'Analytics retrieved successfully');
   }
 
   // ============== ADMIN ROUTES ==============

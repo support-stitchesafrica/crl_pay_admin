@@ -382,7 +382,7 @@ export default function FinancingPlans() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t border-gray-100">
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-4 pt-4 border-t border-gray-100">
                   <div>
                     <p className="text-xs text-gray-500 mb-1">Total Funds</p>
                     <p className="text-lg font-bold text-blue-600">
@@ -398,6 +398,13 @@ export default function FinancingPlans() {
                     <p className="text-xs text-gray-500">Via mappings</p>
                   </div>
                   <div>
+                    <p className="text-xs text-gray-500 mb-1">Total Usage</p>
+                    <p className="text-lg font-bold text-red-600">
+                      {formatCurrency(plan.totalUsage || 0)}
+                    </p>
+                    <p className="text-xs text-gray-500">Disbursed via loans</p>
+                  </div>
+                  <div>
                     <p className="text-xs text-gray-500 mb-1">Available Funds</p>
                     <p className="text-lg font-bold text-green-600">
                       {formatCurrency(plan.totalFundsAllocated - (plan.fundsAllocatedToMerchants || 0))}
@@ -406,7 +413,7 @@ export default function FinancingPlans() {
                   </div>
                   <div>
                     <p className="text-xs text-gray-500 mb-1">Total Loans</p>
-                    <p className="text-lg font-bold text-purple-600">{plan.totalLoansCreated}</p>
+                    <p className="text-lg font-bold text-purple-600">{plan.totalLoansCreated || 0}</p>
                     <p className="text-xs text-gray-500">Created</p>
                   </div>
                 </div>

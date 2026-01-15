@@ -22,7 +22,7 @@ export const updateProfile = async (data: Partial<Financier>): Promise<{ message
  */
 export const getLoans = async (): Promise<Loan[]> => {
   const response = await api.get('/financiers/me/loans');
-  return response.data;
+  return response.data.data || response.data;
 };
 
 /**
@@ -30,5 +30,5 @@ export const getLoans = async (): Promise<Loan[]> => {
  */
 export const getAnalytics = async (): Promise<FinancierAnalytics> => {
   const response = await api.get('/financiers/me/analytics');
-  return response.data;
+  return response.data.data || response.data;
 };

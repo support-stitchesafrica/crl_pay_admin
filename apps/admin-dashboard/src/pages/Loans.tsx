@@ -14,7 +14,7 @@ import {
   X,
   Calendar,
 } from 'lucide-react';
-import { getLoans, triggerInterestAccrualForAll, backfillMissedAccruals } from '../services/loan.service';
+import { getLoans, triggerInterestAccrualForAll } from '../services/loan.service';
 import { Loan } from '../services/types/loan.types';
 import { showToast } from '../utils/toast';
 import DashboardLayout from '../components/DashboardLayout';
@@ -26,7 +26,6 @@ export default function Loans() {
   const [merchantFilter, setMerchantFilter] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState('');
   const [triggeringBulkAccrual, setTriggeringBulkAccrual] = useState(false);
-  const [backfillingAccruals, setBackfillingAccruals] = useState(false);
   const [viewModal, setViewModal] = useState<{
     isOpen: boolean;
     loan: Loan | null;
@@ -68,18 +67,6 @@ export default function Loans() {
     }
   };
 
-  const handleBackfillAccruals = async () => {
-    try {
-      setBackfillingAccruals(true);
-      await backfillMissedAccruals();
-      showToast.success('Missed accruals backfilled successfully');
-      await fetchData(); // Refresh loan data
-    } catch (error: any) {
-      showToast.error(error.message || 'Failed to backfill missed accruals');
-    } finally {
-      setBackfillingAccruals(false);
-    }
-  };
 
   const getStatusBadge = (status: string) => {
     const badges = {
@@ -181,23 +168,6 @@ export default function Loans() {
           <p className="text-gray-600 mt-1">Monitor and manage all loans across all merchants</p>
         </div>
         <div className="flex items-center gap-3">
-          <button
-            onClick={handleBackfillAccruals}
-            disabled={backfillingAccruals}
-            className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-          >
-            {backfillingAccruals ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Backfilling...
-              </>
-            ) : (
-              <>
-                <Calendar className="w-4 h-4" />
-                Backfill Missed Accruals
-              </>
-            )}
-          </button>
           <button
             onClick={handleBulkAccrualTrigger}
             disabled={triggeringBulkAccrual}

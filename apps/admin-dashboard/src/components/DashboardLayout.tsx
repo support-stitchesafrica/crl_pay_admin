@@ -15,6 +15,8 @@ import {
   Building2,
   Link as LinkIcon,
   Plug,
+  ScrollText,
+  Receipt,
 } from 'lucide-react';
 
 interface DashboardLayoutProps {
@@ -29,8 +31,10 @@ const menuItems = [
   { icon: LinkIcon, label: 'Plan Mappings', path: '/plan-mappings' },
   { icon: User, label: 'Customers', path: '/customers' },
   { icon: FileText, label: 'Loans', path: '/loans' },
+  { icon: Receipt, label: 'Transactions', path: '/transactions' },
   { icon: BarChart3, label: 'Analytics', path: '/analytics' },
   { icon: Plug, label: 'Integrations', path: '/integrations' },
+  { icon: ScrollText, label: 'Audit Logs', path: '/audit-logs' },
   { icon: Settings, label: 'Settings', path: '/settings' },
 ];
 

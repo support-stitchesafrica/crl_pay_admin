@@ -203,6 +203,7 @@ export interface FinancingPlan {
   totalFundsAllocated: number;
   fundsAllocatedToMerchants?: number;
   totalLoansCreated: number;
+  totalUsage?: number; // Total amount disbursed through loans using this plan
   createdAt: string | { _seconds: number; _nanoseconds: number };
   updatedAt: string | { _seconds: number; _nanoseconds: number };
   approvedAt?: string | { _seconds: number; _nanoseconds: number };

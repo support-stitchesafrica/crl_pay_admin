@@ -107,8 +107,25 @@ export class PlansService {
 
     const plans = snapshot.docs.map((doc) => doc.data());
 
+    // Fetch all loans to calculate usage per plan
+    const loansSnapshot = await db.collection('crl_loans').get();
+    const loans = loansSnapshot.docs.map((doc) => doc.data());
+
+    // Calculate loan counts and total usage for each plan
+    const enrichedPlans = plans.map((plan) => {
+      const planLoans = loans.filter((loan) => loan.financingPlanId === plan.planId);
+      const totalLoansCreated = planLoans.length;
+      const totalUsage = planLoans.reduce((sum, loan) => sum + (loan.principalAmount || 0), 0);
+
+      return {
+        ...plan,
+        totalLoansCreated,
+        totalUsage, // Total amount disbursed through this plan
+      };
+    });
+
     // Return all plans for admin to manage (pending, approved, active, inactive)
-    return plans;
+    return enrichedPlans;
   }
 
   async getPlans(financierId: string) {
@@ -124,7 +141,28 @@ export class PlansService {
     const plans = snapshot.docs.map((doc) => doc.data());
 
     // Filter by financierId in-memory
-    return plans.filter((plan) => plan.financierId === financierId);
+    const financierPlans = plans.filter((plan) => plan.financierId === financierId);
+
+    // Fetch all loans to calculate usage per plan
+    const loansSnapshot = await db.collection('crl_loans').get();
+    const loans = loansSnapshot.docs.map((doc) => doc.data());
+
+    // Calculate loan counts and total usage for each plan
+    const enrichedPlans = financierPlans.map((plan) => {
+      const planLoans = loans.filter((loan) => loan.financingPlanId === plan.planId);
+      const totalLoansCreated = planLoans.length;
+      const totalUsage = planLoans.reduce((sum, loan) => sum + (loan.principalAmount || 0), 0);
+
+      this.logger.log(`Plan ${plan.name} (${plan.planId}): ${totalLoansCreated} loans, ₦${totalUsage} usage`);
+
+      return {
+        ...plan,
+        totalLoansCreated,
+        totalUsage, // Total amount disbursed through this plan
+      };
+    });
+
+    return enrichedPlans;
   }
 
   async getPlanById(planId: string) {
@@ -415,6 +453,8 @@ export class PlansService {
   async getLoans(financierId: string) {
     const db = this.firebaseService.getFirestore();
 
+    this.logger.log(`Fetching loans for financier: ${financierId}`);
+
     // Fetch all loans ordered by createdAt
     // We filter in-memory to avoid Firestore composite index requirement
     const snapshot = await db
@@ -423,11 +463,24 @@ export class PlansService {
       .get();
 
     const loans = snapshot.docs.map((doc) => doc.data());
+    
+    this.logger.log(`Total loans in database: ${loans.length}`);
+    
+    // Log sample loan data for debugging
+    if (loans.length > 0) {
+      const sampleLoan = loans[0];
+      this.logger.log(`Sample loan - financierId: ${sampleLoan.financierId}, fundingSource: ${sampleLoan.fundingSource}`);
+    }
 
-    // Filter by financierId and fundingSource in-memory
-    return loans.filter(
-      (loan) => loan.financierId === financierId && loan.fundingSource === 'financier'
+    // Filter by financierId in-memory
+    // Note: fundingSource field may not exist on older loans, so we only filter by financierId
+    const filteredLoans = loans.filter(
+      (loan) => loan.financierId === financierId
     );
+    
+    this.logger.log(`Filtered loans for financier ${financierId}: ${filteredLoans.length}`);
+    
+    return filteredLoans;
   }
 
   async getAnalytics(financierId: string) {
@@ -448,7 +501,25 @@ export class PlansService {
     const defaultedLoans = loans.filter((l) => l.status === 'defaulted').length;
 
     const totalDisbursed = loans.reduce((sum, l) => sum + l.principalAmount, 0);
-    const totalRepaid = loans.reduce((sum, l) => sum + (l.amountPaid || 0), 0);
+    
+    // Calculate principal and interest repaid separately
+    let totalPrincipalRepaid = 0;
+    let totalRevenue = 0;
+    
+    loans.forEach((loan) => {
+      const amountPaid = loan.amountPaid || 0;
+      const principalAmount = loan.principalAmount || 0;
+      
+      // Principal repaid is capped at the original principal amount
+      const principalRepaid = Math.min(amountPaid, principalAmount);
+      const interestEarned = Math.max(0, amountPaid - principalAmount);
+      
+      totalPrincipalRepaid += principalRepaid;
+      totalRevenue += interestEarned;
+    });
+    
+    const totalRepaid = totalPrincipalRepaid; // Only principal repaid
+    
     const outstandingAmount = loans
       .filter((l) => l.status === 'active')
       .reduce((sum, l) => sum + (l.amountRemaining || 0), 0);
@@ -475,7 +546,7 @@ export class PlansService {
         totalDisbursed,
         totalRepaid,
         outstandingAmount,
-        totalRevenue: totalRepaid - totalDisbursed, // Interest + fees
+        totalRevenue,
       },
     };
   }

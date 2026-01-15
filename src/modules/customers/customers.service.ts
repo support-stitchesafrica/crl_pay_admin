@@ -106,8 +106,40 @@ export class CustomersService {
         customers.push(doc.data() as Customer);
       });
 
-      this.logger.log(`Retrieved ${customers.length} customers`);
-      return customers;
+      // Fetch all loans to calculate statistics
+      const loansSnapshot = await this.firestore.collection('crl_loans').get();
+      const allLoans = loansSnapshot.docs.map((doc) => doc.data());
+
+      // Fetch all merchants to get merchant names
+      const merchantsSnapshot = await this.firestore.collection('crl_merchants').get();
+      const merchantsMap = new Map();
+      merchantsSnapshot.forEach((doc) => {
+        const merchant = doc.data();
+        merchantsMap.set(merchant.merchantId, merchant.businessName || merchant.companyName);
+      });
+
+      // Enrich customers with loan statistics and merchant info
+      const enrichedCustomers = customers.map((customer) => {
+        const customerLoans = allLoans.filter((loan) => loan.customerId === customer.customerId);
+        
+        const activeLoans = customerLoans.filter((loan) => loan.status === 'active').length;
+        const completedLoans = customerLoans.filter((loan) => loan.status === 'completed').length;
+        const totalLoans = customerLoans.length;
+        
+        // Get merchant name from the customer's merchantId
+        const merchantName = customer.merchantId ? merchantsMap.get(customer.merchantId) : null;
+
+        return {
+          ...customer,
+          activeLoans,
+          completedLoans,
+          totalLoans,
+          merchantName,
+        };
+      });
+
+      this.logger.log(`Retrieved ${enrichedCustomers.length} customers`);
+      return enrichedCustomers;
     } catch (error) {
       this.logger.error('Error fetching customers:', error);
       throw error;
@@ -175,12 +207,63 @@ export class CustomersService {
         .get();
 
       const allCustomers = snapshot.docs.map((doc) => doc.data() as Customer);
+      
+      this.logger.log(`Total customers in database: ${allCustomers.length}`);
+      this.logger.log(`Looking for merchantId: ${merchantId}`);
 
-      // Filter by merchantId in-memory
-      const customers = allCustomers.filter((customer) => customer.registeredVia === merchantId);
+      // Filter by merchantId in-memory - check both registeredVia and merchantId for backwards compatibility
+      const customers = allCustomers.filter((customer) => 
+        customer.registeredVia === merchantId || customer.merchantId === merchantId
+      );
+      
+      this.logger.log(`Filtered ${customers.length} customers from ${allCustomers.length} total customers`);
+      
+      // Log first few customers for debugging
+      if (customers.length > 0) {
+        customers.slice(0, 3).forEach(c => {
+          this.logger.log(`Customer: ${c.firstName} ${c.lastName}, merchantId: ${c.merchantId}, registeredVia: ${c.registeredVia}, customerId: ${c.customerId}`);
+        });
+      }
 
-      this.logger.log(`Found ${customers.length} customers for merchant ${merchantId}`);
-      return customers;
+      // Fetch all loans to calculate statistics
+      const loansSnapshot = await this.firestore.collection('crl_loans').get();
+      const allLoans = loansSnapshot.docs.map((doc) => doc.data());
+      
+      this.logger.log(`Total loans in database: ${allLoans.length}`);
+
+      // Fetch merchant info
+      const merchantsSnapshot = await this.firestore.collection('crl_merchants').get();
+      const merchantsMap = new Map();
+      merchantsSnapshot.forEach((doc) => {
+        const merchant = doc.data();
+        merchantsMap.set(merchant.merchantId, merchant.businessName || merchant.companyName);
+      });
+
+      // Enrich customers with loan statistics and merchant info
+      const enrichedCustomers = customers.map((customer) => {
+        const customerLoans = allLoans.filter((loan) => loan.customerId === customer.customerId);
+        
+        const activeLoans = customerLoans.filter((loan) => loan.status === 'active').length;
+        const completedLoans = customerLoans.filter((loan) => loan.status === 'completed').length;
+        const totalLoans = customerLoans.length;
+        
+        // Get merchant name from the customer's merchantId
+        const merchantName = customer.merchantId ? merchantsMap.get(customer.merchantId) : null;
+
+        // Log for debugging - show all customers with their loan counts
+        this.logger.log(`Customer ${customer.firstName} ${customer.lastName} (ID: ${customer.customerId}): ${totalLoans} loans (${activeLoans} active, ${completedLoans} completed), creditScore: ${customer.creditScore}`);
+
+        return {
+          ...customer,
+          activeLoans,
+          completedLoans,
+          totalLoans,
+          merchantName,
+        };
+      });
+
+      this.logger.log(`Found ${enrichedCustomers.length} customers for merchant ${merchantId}`);
+      return enrichedCustomers;
     } catch (error) {
       this.logger.error('Error fetching customers by merchant:', error);
       throw error;

@@ -212,13 +212,13 @@ export default function FinancingPlans() {
                         <p className="text-lg font-bold text-blue-600">{formatCurrency(mapping.fundsAllocated)}</p>
                       </div>
                       <div>
-                        <p className="text-xs text-gray-500 mb-1">Current Usage</p>
-                        <p className="text-lg font-bold text-orange-600">{formatCurrency(mapping.currentAllocation)}</p>
+                        <p className="text-xs text-gray-500 mb-1">Total Disbursed</p>
+                        <p className="text-lg font-bold text-orange-600">{formatCurrency(mapping.totalDisbursed)}</p>
                       </div>
                       <div>
                         <p className="text-xs text-gray-500 mb-1">Available</p>
                         <p className="text-lg font-bold text-green-600">
-                          {formatCurrency(mapping.fundsAllocated - mapping.currentAllocation)}
+                          {formatCurrency(mapping.fundsAllocated - mapping.totalDisbursed)}
                         </p>
                       </div>
                       <div>
@@ -226,21 +226,21 @@ export default function FinancingPlans() {
                         <div className="flex items-center gap-2">
                           <TrendingUp className="w-4 h-4 text-purple-600" />
                           <p className="text-lg font-bold text-purple-600">
-                            {getUtilizationPercentage(mapping.currentAllocation, mapping.fundsAllocated)}%
+                            {getUtilizationPercentage(mapping.totalDisbursed, mapping.fundsAllocated)}%
                           </p>
                         </div>
                         {/* Progress Bar */}
                         <div className="mt-2 w-full bg-gray-200 rounded-full h-2">
                           <div
                             className={`h-2 rounded-full transition-all ${
-                              getUtilizationPercentage(mapping.currentAllocation, mapping.fundsAllocated) >= 90
+                              getUtilizationPercentage(mapping.totalDisbursed, mapping.fundsAllocated) >= 90
                                 ? 'bg-red-600'
-                                : getUtilizationPercentage(mapping.currentAllocation, mapping.fundsAllocated) >= 70
+                                : getUtilizationPercentage(mapping.totalDisbursed, mapping.fundsAllocated) >= 70
                                 ? 'bg-orange-600'
                                 : 'bg-green-600'
                             }`}
                             style={{
-                              width: `${Math.min(getUtilizationPercentage(mapping.currentAllocation, mapping.fundsAllocated), 100)}%`,
+                              width: `${Math.min(getUtilizationPercentage(mapping.totalDisbursed, mapping.fundsAllocated), 100)}%`,
                             }}
                           />
                         </div>
@@ -249,18 +249,22 @@ export default function FinancingPlans() {
                   </>
                 )}
 
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t border-gray-100">
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-4 pt-4 border-t border-gray-100">
                   <div>
                     <p className="text-xs text-gray-500 mb-1">Total Loans</p>
                     <p className="text-sm font-semibold text-gray-900">{mapping.totalLoans}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-gray-500 mb-1">Total Disbursed</p>
-                    <p className="text-sm font-semibold text-gray-900">{formatCurrency(mapping.totalDisbursed)}</p>
-                  </div>
-                  <div>
                     <p className="text-xs text-gray-500 mb-1">Total Repaid</p>
                     <p className="text-sm font-semibold text-gray-900">{formatCurrency(mapping.totalRepaid)}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">Principal Repaid</p>
+                    <p className="text-sm font-semibold text-blue-600">{formatCurrency(mapping.totalPrincipalRepaid || 0)}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">Interest Repaid</p>
+                    <p className="text-sm font-semibold text-green-600">{formatCurrency(mapping.totalInterestRepaid || 0)}</p>
                   </div>
                   <div>
                     <p className="text-xs text-gray-500 mb-1">Expires</p>

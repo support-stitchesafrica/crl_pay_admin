@@ -334,6 +334,7 @@ export class MerchantsService {
     total: number;
     pending: number;
     approved: number;
+    active: number;
     rejected: number;
     suspended: number;
   }> {
@@ -346,6 +347,7 @@ export class MerchantsService {
         total: 0,
         pending: 0,
         approved: 0,
+        active: 0,
         rejected: 0,
         suspended: 0,
       };
@@ -355,6 +357,9 @@ export class MerchantsService {
         stats.total++;
         stats[merchant.status]++;
       });
+
+      // Active merchants are approved merchants
+      stats.active = stats.approved;
 
       this.logger.log(`Stats: Total=${stats.total}, Pending=${stats.pending}, Approved=${stats.approved}, Rejected=${stats.rejected}, Suspended=${stats.suspended}`);
       return stats;

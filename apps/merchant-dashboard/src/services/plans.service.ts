@@ -12,6 +12,8 @@ export interface PlanMerchantMapping {
   totalLoans: number;
   totalDisbursed: number;
   totalRepaid: number;
+  totalPrincipalRepaid: number;
+  totalInterestRepaid: number;
   defaultRate: number;
   mappedBy: string;
   mappedAt: string | { _seconds: number; _nanoseconds: number };

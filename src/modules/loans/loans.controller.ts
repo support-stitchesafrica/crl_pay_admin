@@ -128,6 +128,22 @@ export class LoansController {
     }
   }
 
+  @Get('stats')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Get global loan statistics (Admin only)' })
+  @ApiResponseDecorator({ status: 200, description: 'Statistics retrieved successfully' })
+  @ApiResponseDecorator({ status: 401, description: 'Unauthorized' })
+  async getGlobalStats() {
+    try {
+      const stats = await this.loansService.getGlobalStats();
+      return ApiResponse.success(stats, 'Statistics retrieved successfully');
+    } catch (error) {
+      return ApiResponse.error(error.message, error);
+    }
+  }
+
   @Get('me/stats')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()

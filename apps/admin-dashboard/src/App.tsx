@@ -16,6 +16,8 @@ import PlanMerchantMapping from './pages/PlanMerchantMapping';
 import Settings from './pages/Settings';
 import Analytics from './pages/Analytics';
 import Integrations from './pages/Integrations';
+import AuditLogs from './pages/AuditLogs';
+import Transactions from './pages/Transactions';
 
 const queryClient = new QueryClient();
 
@@ -69,6 +71,14 @@ function App() {
               }
             />
             <Route
+              path="/transactions"
+              element={
+                <ProtectedRoute>
+                  <Transactions />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/analytics"
               element={
                 <ProtectedRoute>
@@ -113,6 +123,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <PlanMerchantMapping />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/audit-logs"
+              element={
+                <ProtectedRoute>
+                  <AuditLogs />
                 </ProtectedRoute>
               }
             />

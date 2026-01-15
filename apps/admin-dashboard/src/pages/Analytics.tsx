@@ -14,16 +14,41 @@ import {
   Calendar,
   Loader2,
 } from 'lucide-react';
+import * as analyticsService from '../services/analytics.service';
+import { showToast } from '../utils/toast';
 
 export default function Analytics() {
   const [loading, setLoading] = useState(true);
   const [timeRange, setTimeRange] = useState<'7d' | '30d' | '90d' | '1y'>('30d');
+  const [dashboard, setDashboard] = useState<any>(null);
+  const [distribution, setDistribution] = useState<any>(null);
+  const [merchantPerformance, setMerchantPerformance] = useState<any[]>([]);
 
   useEffect(() => {
-    // Simulate loading analytics data
-    const timer = setTimeout(() => setLoading(false), 1000);
-    return () => clearTimeout(timer);
+    loadAnalytics();
   }, [timeRange]);
+
+  const loadAnalytics = async () => {
+    try {
+      setLoading(true);
+      const periodMap = { '7d': 'weekly', '30d': 'monthly', '90d': 'monthly', '1y': 'yearly' };
+      const period = periodMap[timeRange];
+      
+      const [dashboardData, distributionData, merchantData] = await Promise.all([
+        analyticsService.getDashboardAnalytics(period),
+        analyticsService.getLoanDistribution(),
+        analyticsService.getMerchantPerformance(),
+      ]);
+      
+      setDashboard(dashboardData);
+      setDistribution(distributionData);
+      setMerchantPerformance(merchantData);
+    } catch (error: any) {
+      showToast.error(error.message || 'Failed to load analytics');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -38,58 +63,89 @@ export default function Analytics() {
     );
   }
 
+  if (!dashboard || !distribution) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <Loader2 className="w-8 h-8 animate-spin text-blue-600 mx-auto mb-3" />
+            <p className="text-gray-600">Loading analytics...</p>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  const formatCurrency = (amount: number) => {
+    return `₦${amount.toLocaleString()}`;
+  };
+
+  const formatChange = (change: number) => {
+    const sign = change >= 0 ? '+' : '';
+    return `${sign}${change}%`;
+  };
+
   const stats = [
     {
       label: 'Total Revenue',
-      value: '₦45,231,890',
-      change: '+12.5%',
-      trend: 'up' as const,
+      value: formatCurrency(dashboard.totalRevenue),
+      change: formatChange(dashboard.trends.revenueChange),
+      trend: dashboard.trends.revenueChange >= 0 ? 'up' as const : 'down' as const,
       icon: DollarSign,
       color: 'text-green-600',
       bgColor: 'bg-green-100',
     },
     {
       label: 'Active Loans',
-      value: '1,234',
-      change: '+8.2%',
-      trend: 'up' as const,
+      value: dashboard.activeLoans.toLocaleString(),
+      change: formatChange(dashboard.trends.loansChange),
+      trend: dashboard.trends.loansChange >= 0 ? 'up' as const : 'down' as const,
       icon: CreditCard,
       color: 'text-blue-600',
       bgColor: 'bg-blue-100',
     },
     {
       label: 'Default Rate',
-      value: '2.3%',
-      change: '-0.5%',
-      trend: 'down' as const,
+      value: `${dashboard.defaultRate.toFixed(1)}%`,
+      change: dashboard.defaultRate < 3 ? '-0.5%' : '+0.5%',
+      trend: dashboard.defaultRate < 3 ? 'down' as const : 'up' as const,
       icon: AlertCircle,
       color: 'text-red-600',
       bgColor: 'bg-red-100',
     },
     {
-      label: 'Active Users',
-      value: '8,549',
-      change: '+15.3%',
-      trend: 'up' as const,
+      label: 'Collection Rate',
+      value: `${dashboard.collectionRate.toFixed(1)}%`,
+      change: formatChange(dashboard.trends.collectedChange),
+      trend: dashboard.trends.collectedChange >= 0 ? 'up' as const : 'down' as const,
       icon: Users,
       color: 'text-purple-600',
       bgColor: 'bg-purple-100',
     },
   ];
 
+  const totalDisbursed = dashboard.totalDisbursed;
   const loanMetrics = [
-    { label: 'Total Disbursed', value: '₦125,450,000', percentage: 100 },
-    { label: 'Total Repaid', value: '₦98,360,000', percentage: 78 },
-    { label: 'Outstanding', value: '₦27,090,000', percentage: 22 },
-    { label: 'Defaulted', value: '₦2,890,000', percentage: 2.3 },
-  ];
-
-  const merchantPerformance = [
-    { name: 'Stitches Africa', loans: 456, revenue: '₦12,450,000', defaultRate: 1.2 },
-    { name: 'Fashion Hub', loans: 389, revenue: '₦9,870,000', defaultRate: 2.1 },
-    { name: 'Tech Store', loans: 312, revenue: '₦8,230,000', defaultRate: 1.8 },
-    { name: 'Home Essentials', loans: 278, revenue: '₦7,560,000', defaultRate: 2.5 },
-    { name: 'Beauty Palace', loans: 234, revenue: '₦6,120,000', defaultRate: 1.5 },
+    { 
+      label: 'Total Disbursed', 
+      value: formatCurrency(dashboard.totalDisbursed), 
+      percentage: 100 
+    },
+    { 
+      label: 'Total Collected', 
+      value: formatCurrency(dashboard.totalCollected), 
+      percentage: totalDisbursed > 0 ? (dashboard.totalCollected / totalDisbursed) * 100 : 0 
+    },
+    { 
+      label: 'Outstanding', 
+      value: formatCurrency(dashboard.totalOutstanding), 
+      percentage: totalDisbursed > 0 ? (dashboard.totalOutstanding / totalDisbursed) * 100 : 0 
+    },
+    { 
+      label: 'Default Rate', 
+      value: `${dashboard.defaultRate.toFixed(1)}%`, 
+      percentage: dashboard.defaultRate 
+    },
   ];
 
   return (
@@ -195,46 +251,34 @@ export default function Analytics() {
               Loan Status Distribution
             </h3>
             <div className="space-y-3">
-              <div className="flex items-center justify-between py-2 border-b border-gray-100">
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="w-4 h-4 text-green-600" />
-                  <span className="text-sm text-gray-700">Completed</span>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm font-semibold text-gray-900">567 loans</p>
-                  <p className="text-xs text-gray-500">45.9%</p>
-                </div>
-              </div>
-              <div className="flex items-center justify-between py-2 border-b border-gray-100">
-                <div className="flex items-center gap-2">
-                  <Clock className="w-4 h-4 text-blue-600" />
-                  <span className="text-sm text-gray-700">Active</span>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm font-semibold text-gray-900">456 loans</p>
-                  <p className="text-xs text-gray-500">36.9%</p>
-                </div>
-              </div>
-              <div className="flex items-center justify-between py-2 border-b border-gray-100">
-                <div className="flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4 text-yellow-600" />
-                  <span className="text-sm text-gray-700">Pending</span>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm font-semibold text-gray-900">183 loans</p>
-                  <p className="text-xs text-gray-500">14.8%</p>
-                </div>
-              </div>
-              <div className="flex items-center justify-between py-2">
-                <div className="flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4 text-red-600" />
-                  <span className="text-sm text-gray-700">Defaulted</span>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm font-semibold text-gray-900">28 loans</p>
-                  <p className="text-xs text-gray-500">2.3%</p>
-                </div>
-              </div>
+              {Object.entries(distribution.byStatus).map(([status, count]: [string, any]) => {
+                const totalLoans = Object.values(distribution.byStatus).reduce((sum: number, c: any) => sum + c, 0);
+                const percentage = totalLoans > 0 ? ((count / totalLoans) * 100).toFixed(1) : '0.0';
+                
+                const statusConfig: Record<string, { icon: any; color: string; label: string }> = {
+                  completed: { icon: CheckCircle, color: 'text-green-600', label: 'Completed' },
+                  active: { icon: Clock, color: 'text-blue-600', label: 'Active' },
+                  pending: { icon: AlertCircle, color: 'text-yellow-600', label: 'Pending' },
+                  defaulted: { icon: AlertCircle, color: 'text-red-600', label: 'Defaulted' },
+                  cancelled: { icon: AlertCircle, color: 'text-gray-600', label: 'Cancelled' },
+                };
+                
+                const config = statusConfig[status] || { icon: Clock, color: 'text-gray-600', label: status };
+                const Icon = config.icon;
+                
+                return (
+                  <div key={status} className="flex items-center justify-between py-2 border-b border-gray-100">
+                    <div className="flex items-center gap-2">
+                      <Icon className={`w-4 h-4 ${config.color}`} />
+                      <span className="text-sm text-gray-700">{config.label}</span>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-semibold text-gray-900">{count} loans</p>
+                      <p className="text-xs text-gray-500">{percentage}%</p>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
@@ -266,43 +310,51 @@ export default function Analytics() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {merchantPerformance.map((merchant, index) => (
-                  <tr key={merchant.name} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
-                          <span className="text-blue-600 font-semibold text-sm">
-                            {index + 1}
-                          </span>
-                        </div>
-                        <span className="text-sm font-medium text-gray-900">
-                          {merchant.name}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-sm text-gray-900">{merchant.loans}</span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-sm font-semibold text-green-600">
-                        {merchant.revenue}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          merchant.defaultRate < 2
-                            ? 'bg-green-100 text-green-700'
-                            : merchant.defaultRate < 2.5
-                              ? 'bg-yellow-100 text-yellow-700'
-                              : 'bg-red-100 text-red-700'
-                        }`}
-                      >
-                        {merchant.defaultRate}%
-                      </span>
+                {merchantPerformance.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="px-6 py-8 text-center text-gray-500">
+                      No merchant data available
                     </td>
                   </tr>
-                ))}
+                ) : (
+                  merchantPerformance.map((merchant, index) => (
+                    <tr key={merchant.merchantId} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+                            <span className="text-blue-600 font-semibold text-sm">
+                              {index + 1}
+                            </span>
+                          </div>
+                          <span className="text-sm font-medium text-gray-900">
+                            {merchant.merchantName}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className="text-sm text-gray-900">{merchant.totalLoans}</span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className="text-sm font-semibold text-green-600">
+                          {formatCurrency(merchant.totalDisbursed)}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span
+                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            merchant.defaultRate < 2
+                              ? 'bg-green-100 text-green-700'
+                              : merchant.defaultRate < 2.5
+                                ? 'bg-yellow-100 text-yellow-700'
+                                : 'bg-red-100 text-red-700'
+                          }`}
+                        >
+                          {merchant.defaultRate}%
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
@@ -313,19 +365,21 @@ export default function Analytics() {
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
             <div className="flex items-center gap-2 mb-3">
               <Calendar className="w-5 h-5 text-blue-600" />
-              <h4 className="font-semibold text-gray-900">Monthly Growth</h4>
+              <h4 className="font-semibold text-gray-900">Loan Growth</h4>
             </div>
-            <p className="text-3xl font-bold text-blue-600 mb-2">+23.5%</p>
-            <p className="text-sm text-gray-600">Compared to last month</p>
+            <p className={`text-3xl font-bold mb-2 ${dashboard.trends.loansChange >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
+              {formatChange(dashboard.trends.loansChange)}
+            </p>
+            <p className="text-sm text-gray-600">Compared to last period</p>
           </div>
 
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
             <div className="flex items-center gap-2 mb-3">
               <Users className="w-5 h-5 text-purple-600" />
-              <h4 className="font-semibold text-gray-900">Customer Retention</h4>
+              <h4 className="font-semibold text-gray-900">Collection Rate</h4>
             </div>
-            <p className="text-3xl font-bold text-purple-600 mb-2">87.3%</p>
-            <p className="text-sm text-gray-600">Returning customers</p>
+            <p className="text-3xl font-bold text-purple-600 mb-2">{dashboard.collectionRate.toFixed(1)}%</p>
+            <p className="text-sm text-gray-600">Of disbursed amount</p>
           </div>
 
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
@@ -333,8 +387,10 @@ export default function Analytics() {
               <TrendingUp className="w-5 h-5 text-green-600" />
               <h4 className="font-semibold text-gray-900">Average Loan Size</h4>
             </div>
-            <p className="text-3xl font-bold text-green-600 mb-2">₦125,450</p>
-            <p className="text-sm text-gray-600">+12% from last period</p>
+            <p className="text-3xl font-bold text-green-600 mb-2">
+              {formatCurrency(dashboard.totalLoans > 0 ? Math.round(dashboard.totalDisbursed / dashboard.totalLoans) : 0)}
+            </p>
+            <p className="text-sm text-gray-600">Per loan disbursed</p>
           </div>
         </div>
       </div>

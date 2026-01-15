@@ -157,7 +157,38 @@ export class FinanciersService {
       delete data.passwordHash; // Don't return password hash
     }
 
-    return data;
+    // Enrich profile with calculated loan statistics
+    const loansSnapshot = await db
+      .collection('crl_loans')
+      .where('financierId', '==', financierId)
+      .get();
+
+    const loans = loansSnapshot.docs.map((doc) => doc.data());
+    
+    const totalDisbursed = loans.reduce((sum, l) => sum + (l.principalAmount || 0), 0);
+    
+    // Calculate principal and interest repaid separately
+    let totalPrincipalRepaid = 0;
+    let totalInterestRepaid = 0;
+    
+    loans.forEach((loan) => {
+      const amountPaid = loan.amountPaid || 0;
+      const principalAmount = loan.principalAmount || 0;
+      
+      // Principal repaid is capped at the original principal amount
+      const principalRepaid = Math.min(amountPaid, principalAmount);
+      const interestRepaid = Math.max(0, amountPaid - principalAmount);
+      
+      totalPrincipalRepaid += principalRepaid;
+      totalInterestRepaid += interestRepaid;
+    });
+
+    return {
+      ...data,
+      totalDisbursed,
+      totalRepaid: totalPrincipalRepaid, // Only principal repaid
+      totalInterestRepaid, // Interest earned
+    };
   }
 
   async updateProfile(financierId: string, updates: any) {

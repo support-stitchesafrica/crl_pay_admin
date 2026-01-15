@@ -25,10 +25,61 @@ export class PlanMappingsService {
     }
 
     const snapshot = await query.get();
-    const mappings = snapshot.docs.map((doc) => ({
-      mappingId: doc.id,
-      ...doc.data(),
-    }));
+    
+    // Fetch all loans to calculate statistics
+    const loansSnapshot = await db.collection('crl_loans').get();
+    const allLoans = loansSnapshot.docs.map((doc) => doc.data());
+
+    const mappings = snapshot.docs.map((doc) => {
+      const mapping = doc.data();
+      
+      // Filter loans for this specific mapping (by planId and merchantId)
+      const mappingLoans = allLoans.filter(
+        (loan) => 
+          loan.financingPlanId === mapping.planId && 
+          loan.merchantId === mapping.merchantId
+      );
+
+      // Calculate statistics
+      const totalLoans = mappingLoans.length;
+      const totalDisbursed = mappingLoans.reduce((sum, loan) => sum + (loan.principalAmount || 0), 0);
+      const totalRepaid = mappingLoans.reduce((sum, loan) => sum + (loan.amountPaid || 0), 0);
+      const currentAllocation = totalDisbursed - totalRepaid; // Outstanding amount
+      
+      // Calculate principal and interest repaid
+      // For each loan: principalRepaid = min(amountPaid, principalAmount)
+      // interestRepaid = amountPaid - principalRepaid
+      let totalPrincipalRepaid = 0;
+      let totalInterestRepaid = 0;
+      
+      mappingLoans.forEach((loan) => {
+        const amountPaid = loan.amountPaid || 0;
+        const principalAmount = loan.principalAmount || 0;
+        
+        // Principal repaid is capped at the original principal amount
+        const principalRepaid = Math.min(amountPaid, principalAmount);
+        const interestRepaid = Math.max(0, amountPaid - principalAmount);
+        
+        totalPrincipalRepaid += principalRepaid;
+        totalInterestRepaid += interestRepaid;
+      });
+      
+      // Calculate default rate (loans with status 'defaulted')
+      const defaultedLoans = mappingLoans.filter((loan) => loan.status === 'defaulted').length;
+      const defaultRate = totalLoans > 0 ? (defaultedLoans / totalLoans) * 100 : 0;
+
+      return {
+        mappingId: doc.id,
+        ...mapping,
+        currentAllocation,
+        totalLoans,
+        totalDisbursed,
+        totalRepaid,
+        totalPrincipalRepaid,
+        totalInterestRepaid,
+        defaultRate,
+      };
+    });
 
     return mappings;
   }

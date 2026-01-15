@@ -83,12 +83,12 @@ export default function Dashboard() {
         </div>
 
         <div className="bg-white p-6 rounded-lg shadow">
-          <div className="flex items-center justify-center">
+          <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600">Active Loans</p>
               <p className="text-3xl font-bold">{stats?.activeLoans || 0}</p>
               <p className="text-xs text-gray-500 mt-1">
-                Coming in Week 3
+                Currently active
               </p>
             </div>
             <TrendingUp className="w-12 h-12 text-green-600" />
@@ -99,28 +99,39 @@ export default function Dashboard() {
       {/* Quick Links */}
       <div className="bg-white rounded-lg shadow p-6">
         <h2 className="text-lg font-semibold mb-4">Quick Actions</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Link
-            to="/approvals"
+            to="/merchants"
             className="p-4 border rounded hover:bg-gray-50 flex items-center gap-3 transition-colors"
           >
             <Users className="w-6 h-6 text-blue-600" />
             <div>
-              <h3 className="font-medium">Merchant Approvals</h3>
+              <h3 className="font-medium">Manage Merchants</h3>
               <p className="text-sm text-gray-600">
-                Review {stats?.pendingApprovals || 0} pending merchant applications
+                {stats?.pendingApprovals || 0} pending approvals
               </p>
             </div>
           </Link>
 
           <Link
-            to="/analytics"
+            to="/loans"
             className="p-4 border rounded hover:bg-gray-50 flex items-center gap-3 transition-colors"
           >
             <TrendingUp className="w-6 h-6 text-green-600" />
             <div>
-              <h3 className="font-medium">System Analytics</h3>
-              <p className="text-sm text-gray-600">View system-wide performance</p>
+              <h3 className="font-medium">View Loans</h3>
+              <p className="text-sm text-gray-600">Monitor all loan activities</p>
+            </div>
+          </Link>
+
+          <Link
+            to="/audit-logs"
+            className="p-4 border rounded hover:bg-gray-50 flex items-center gap-3 transition-colors"
+          >
+            <LayoutDashboard className="w-6 h-6 text-purple-600" />
+            <div>
+              <h3 className="font-medium">Audit Logs</h3>
+              <p className="text-sm text-gray-600">Track system activities</p>
             </div>
           </Link>
         </div>
