@@ -129,7 +129,7 @@ export class RepaymentsService {
           merchantId: schedule.merchantId,
           reference: dto.reference,
           loanId: dto.loanId,
-          financierId: schedule.financierId,
+          // financierId: schedule.financierId, // Deprecated field
           amount: dto.amount,
           currency: 'NGN',
           provider: 'manual',

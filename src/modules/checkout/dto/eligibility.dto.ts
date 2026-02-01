@@ -16,11 +16,5 @@ export class CheckEligibilityDto {
 export class EligibilityResponseDto {
   eligible: boolean;
   reason?: string;
-  eligibleMappings?: Array<{
-    mappingId: string;
-    planId: string;
-    financierId: string;
-    remainingAllocation: number;
-    expirationDate: Date;
-  }>;
+  allocationId?: string;
 }

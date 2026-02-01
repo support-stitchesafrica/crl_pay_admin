@@ -12,11 +12,13 @@ import {
   X,
   Bell,
   User,
-  Building2,
-  Link as LinkIcon,
   Plug,
   ScrollText,
   Receipt,
+  Wallet,
+  PieChart,
+  CheckSquare,
+  Sliders,
 } from 'lucide-react';
 
 interface DashboardLayoutProps {
@@ -26,13 +28,14 @@ interface DashboardLayoutProps {
 const menuItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
   { icon: Users, label: 'Merchants', path: '/merchants' },
-  { icon: Building2, label: 'Financiers', path: '/financiers' },
-  { icon: FileText, label: 'Financing Plans', path: '/financing-plans' },
-  { icon: LinkIcon, label: 'Plan Mappings', path: '/plan-mappings' },
   { icon: User, label: 'Customers', path: '/customers' },
+  { icon: Wallet, label: 'Capital Pool', path: '/capital-pool' },
+  { icon: PieChart, label: 'Allocations', path: '/allocations' },
+  { icon: CheckSquare, label: 'Settlements', path: '/settlements' },
   { icon: FileText, label: 'Loans', path: '/loans' },
   { icon: Receipt, label: 'Transactions', path: '/transactions' },
   { icon: BarChart3, label: 'Analytics', path: '/analytics' },
+  { icon: Sliders, label: 'Credit Config', path: '/credit-config' },
   { icon: Plug, label: 'Integrations', path: '/integrations' },
   { icon: ScrollText, label: 'Audit Logs', path: '/audit-logs' },
   { icon: Settings, label: 'Settings', path: '/settings' },

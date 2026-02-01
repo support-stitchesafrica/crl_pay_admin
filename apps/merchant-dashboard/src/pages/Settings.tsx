@@ -1,17 +1,10 @@
 import { useEffect, useState } from 'react';
 import DashboardLayout from '../components/DashboardLayout';
-import { Building2, Phone as PhoneIcon, MapPin, Mail, AlertCircle, Loader2, CheckCircle, Globe, Edit2, X, CreditCard, Key, Copy, Eye, EyeOff } from 'lucide-react';
+import { Building2, Phone as PhoneIcon, MapPin, Mail, AlertCircle, Loader2, CheckCircle, Globe, Edit2, X, Key, Copy, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 import { Input, PhoneInput } from '../components/ui';
-
-interface SettlementAccount {
-  bankName: string;
-  accountNumber: string;
-  accountName: string;
-  bankCode?: string;
-}
 
 interface MerchantProfile {
   merchantId: string;
@@ -23,7 +16,6 @@ interface MerchantProfile {
   websiteUrl?: string;
   cacNumber?: string;
   status: string;
-  settlementAccount?: SettlementAccount;
   apiKey?: string;
   apiSecret?: string;
 }
@@ -31,6 +23,7 @@ interface MerchantProfile {
 export default function Settings() {
   const { logout } = useAuth();
   const [profile, setProfile] = useState<MerchantProfile | null>(null);
+  const [credentials, setCredentials] = useState<{ apiKey?: string; apiSecret?: string }>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -44,12 +37,6 @@ export default function Settings() {
     websiteUrl: '',
     businessCategory: '',
     cacNumber: '',
-    settlementAccount: {
-      bankName: '',
-      accountNumber: '',
-      accountName: '',
-      bankCode: '',
-    },
   });
 
   useEffect(() => {
@@ -61,8 +48,8 @@ export default function Settings() {
       setLoading(true);
       setError(null);
 
+      // Load profile
       const response = await api.get('/merchants/me');
-
       const data = response.data.data || response.data;
       setProfile(data);
       setFormData({
@@ -71,13 +58,20 @@ export default function Settings() {
         websiteUrl: data.websiteUrl || '',
         businessCategory: data.businessCategory || '',
         cacNumber: data.cacNumber || '',
-        settlementAccount: {
-          bankName: data.settlementAccount?.bankName || '',
-          accountNumber: data.settlementAccount?.accountNumber || '',
-          accountName: data.settlementAccount?.accountName || '',
-          bankCode: data.settlementAccount?.bankCode || '',
-        },
       });
+
+      // Load API credentials separately
+      try {
+        const credentialsResponse = await api.get('/merchants/me/credentials');
+        const credData = credentialsResponse.data.data || credentialsResponse.data;
+        setCredentials({
+          apiKey: credData.apiKey,
+          apiSecret: credData.apiSecret,
+        });
+      } catch (credErr) {
+        console.error('Failed to load credentials:', credErr);
+        // Don't fail the whole page if credentials fail to load
+      }
     } catch (err: any) {
       const errorMsg = err.response?.data?.message || 'Failed to load profile';
       setError(errorMsg);
@@ -97,12 +91,6 @@ export default function Settings() {
       websiteUrl: profile?.websiteUrl || '',
       businessCategory: profile?.businessCategory || '',
       cacNumber: profile?.cacNumber || '',
-      settlementAccount: {
-        bankName: profile?.settlementAccount?.bankName || '',
-        accountNumber: profile?.settlementAccount?.accountNumber || '',
-        accountName: profile?.settlementAccount?.accountName || '',
-        bankCode: profile?.settlementAccount?.bankCode || '',
-      },
     });
     setShowEditModal(true);
   };
@@ -123,24 +111,6 @@ export default function Settings() {
       if (formData.websiteUrl) payload.websiteUrl = formData.websiteUrl;
       if (formData.businessCategory) payload.businessCategory = formData.businessCategory;
       if (formData.cacNumber) payload.cacNumber = formData.cacNumber;
-
-      // Only include settlement account if at least one field is filled
-      if (
-        formData.settlementAccount.bankName ||
-        formData.settlementAccount.accountNumber ||
-        formData.settlementAccount.accountName ||
-        formData.settlementAccount.bankCode
-      ) {
-        payload.settlementAccount = {};
-        if (formData.settlementAccount.bankName)
-          payload.settlementAccount.bankName = formData.settlementAccount.bankName;
-        if (formData.settlementAccount.accountNumber)
-          payload.settlementAccount.accountNumber = formData.settlementAccount.accountNumber;
-        if (formData.settlementAccount.accountName)
-          payload.settlementAccount.accountName = formData.settlementAccount.accountName;
-        if (formData.settlementAccount.bankCode)
-          payload.settlementAccount.bankCode = formData.settlementAccount.bankCode;
-      }
 
       await api.patch('/merchants/me', payload);
 
@@ -278,41 +248,6 @@ export default function Settings() {
           </div>
         </div>
 
-        {/* Settlement Account */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <div className="flex items-start gap-3 mb-4">
-            <CreditCard className="w-5 h-5 text-gray-400 mt-0.5" />
-            <div className="flex-1">
-              <h3 className="text-lg font-bold text-gray-900">Settlement Account</h3>
-              <p className="text-sm text-gray-600 mt-1">
-                When a loan is disbursed, funds will be sent to this account for merchant purchases.
-              </p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="text-sm font-medium text-gray-700">Bank Name</label>
-              <p className="text-gray-900 mt-1">{profile?.settlementAccount?.bankName || 'Not configured'}</p>
-            </div>
-
-            <div>
-              <label className="text-sm font-medium text-gray-700">Account Number</label>
-              <p className="text-gray-900 mt-1">{profile?.settlementAccount?.accountNumber || 'Not configured'}</p>
-            </div>
-
-            <div>
-              <label className="text-sm font-medium text-gray-700">Account Name</label>
-              <p className="text-gray-900 mt-1">{profile?.settlementAccount?.accountName || 'Not configured'}</p>
-            </div>
-
-            <div>
-              <label className="text-sm font-medium text-gray-700">Bank Code</label>
-              <p className="text-gray-900 mt-1">{profile?.settlementAccount?.bankCode || 'Not provided'}</p>
-            </div>
-          </div>
-        </div>
-
         {/* API Credentials */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
           <div className="flex items-start gap-3 mb-4">
@@ -332,7 +267,7 @@ export default function Settings() {
               <div className="flex items-center gap-2">
                 <div className="flex-1 px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg font-mono text-sm text-gray-900 flex items-center justify-between">
                   <span className="truncate">
-                    {showApiKey ? profile?.apiKey || 'Not generated' : '••••••••••••••••••••••••••••••••'}
+                    {showApiKey ? credentials?.apiKey || 'Not generated' : '••••••••••••••••••••••••••••••••'}
                   </span>
                   <button
                     onClick={() => setShowApiKey(!showApiKey)}
@@ -344,8 +279,8 @@ export default function Settings() {
                 </div>
                 <button
                   onClick={() => {
-                    if (profile?.apiKey) {
-                      navigator.clipboard.writeText(profile.apiKey);
+                    if (credentials?.apiKey) {
+                      navigator.clipboard.writeText(credentials.apiKey);
                       toast.success('Public key copied to clipboard!');
                     }
                   }}
@@ -363,7 +298,7 @@ export default function Settings() {
               <div className="flex items-center gap-2">
                 <div className="flex-1 px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg font-mono text-sm text-gray-900 flex items-center justify-between">
                   <span className="truncate">
-                    {showApiSecret ? profile?.apiSecret || 'Not generated' : '••••••••••••••••••••••••••••••••'}
+                    {showApiSecret ? credentials?.apiSecret || 'Not generated' : '••••••••••••••••••••••••••••••••'}
                   </span>
                   <button
                     onClick={() => setShowApiSecret(!showApiSecret)}
@@ -375,8 +310,8 @@ export default function Settings() {
                 </div>
                 <button
                   onClick={() => {
-                    if (profile?.apiSecret) {
-                      navigator.clipboard.writeText(profile.apiSecret);
+                    if (credentials?.apiSecret) {
+                      navigator.clipboard.writeText(credentials.apiSecret);
                       toast.success('Secret key copied to clipboard!');
                     }
                   }}
@@ -496,78 +431,6 @@ export default function Settings() {
                 </div>
               )}
 
-              {/* Settlement Account */}
-              <div className="bg-gray-50 rounded-lg p-4">
-                <h4 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                  <CreditCard className="w-5 h-5 text-gray-600" />
-                  Settlement Account
-                </h4>
-                <div className="space-y-4">
-                  <Input
-                    label="Bank Name"
-                    type="text"
-                    value={formData.settlementAccount.bankName}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        settlementAccount: {
-                          ...formData.settlementAccount,
-                          bankName: e.target.value,
-                        },
-                      })
-                    }
-                    placeholder="e.g., First Bank of Nigeria"
-                  />
-
-                  <Input
-                    label="Account Number"
-                    type="text"
-                    value={formData.settlementAccount.accountNumber}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        settlementAccount: {
-                          ...formData.settlementAccount,
-                          accountNumber: e.target.value,
-                        },
-                      })
-                    }
-                    placeholder="1234567890"
-                  />
-
-                  <Input
-                    label="Account Name"
-                    type="text"
-                    value={formData.settlementAccount.accountName}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        settlementAccount: {
-                          ...formData.settlementAccount,
-                          accountName: e.target.value,
-                        },
-                      })
-                    }
-                    placeholder="Business Account Name"
-                  />
-
-                  <Input
-                    label="Bank Code (Optional)"
-                    type="text"
-                    value={formData.settlementAccount.bankCode}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        settlementAccount: {
-                          ...formData.settlementAccount,
-                          bankCode: e.target.value,
-                        },
-                      })
-                    }
-                    placeholder="e.g., 011"
-                  />
-                </div>
-              </div>
             </div>
 
             {/* Footer */}

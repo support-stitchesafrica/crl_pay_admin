@@ -5,14 +5,14 @@ export interface Reservation {
   idempotencyKey: string;
 
   merchantId: string;
+  customerId: string;
   reference: string;
 
-  mappingId: string;
-  planId?: string;
-  financierId?: string;
+  allocationId: string;
 
   amount: number;
   currency: string;
+  creditTier: 'bronze' | 'silver' | 'gold' | 'platinum';
 
   status: ReservationStatus;
   expiresAt: Date;

@@ -3,6 +3,8 @@ export type TransactionStatus = 'pending' | 'success' | 'failed';
 export type TransactionType =
   | 'ALLOCATION_RESERVED'
   | 'ALLOCATION_RELEASED'
+  | 'CREDIT_RESERVED'
+  | 'CREDIT_RELEASED'
   | 'DISBURSEMENT_INITIATED'
   | 'DISBURSEMENT_SUCCESS'
   | 'DISBURSEMENT_FAILED'
@@ -20,11 +22,10 @@ export interface Transaction {
   idempotencyKey: string;
 
   merchantId: string;
+  customerId?: string;
   reference: string;
 
-  mappingId?: string;
-  planId?: string;
-  financierId?: string;
+  allocationId?: string;
   loanId?: string;
   reservationId?: string;
   disbursementId?: string;

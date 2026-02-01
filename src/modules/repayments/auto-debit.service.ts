@@ -276,7 +276,7 @@ export class AutoDebitService {
         merchantId: schedule.merchantId,
         reference: chargeResponse.data.reference,
         loanId: schedule.loanId,
-        financierId: schedule.financierId,
+        // financierId: schedule.financierId, // Deprecated field
         amount: repayment.amount,
         currency: 'NGN',
         provider: integration.provider,

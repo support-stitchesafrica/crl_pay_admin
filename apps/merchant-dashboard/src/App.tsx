@@ -7,7 +7,6 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import ForgotPassword from './pages/ForgotPassword';
 import Dashboard from './pages/Dashboard';
-import FinancingPlans from './pages/FinancingPlans';
 import Transactions from './pages/Transactions';
 import Customers from './pages/Customers';
 import Loans from './pages/Loans';
@@ -34,14 +33,6 @@ function App() {
               element={
                 <ProtectedRoute>
                   <Dashboard />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/financing-plans"
-              element={
-                <ProtectedRoute>
-                  <FinancingPlans />
                 </ProtectedRoute>
               }
             />

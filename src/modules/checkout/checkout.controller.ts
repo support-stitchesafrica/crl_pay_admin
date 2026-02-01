@@ -15,6 +15,7 @@ import { ApiKeyGuard } from '../auth/guards/api-key.guard';
 import { ApiResponse } from '../../common/helpers/response.helper';
 import { CheckEligibilityDto } from './dto/eligibility.dto';
 import { ReserveAllocationDto } from './dto/reserve.dto';
+import { InitiateDisbursementDto } from './dto/initiate-disbursement.dto';
 
 @ApiTags('Checkout')
 @Controller('checkout')
@@ -48,6 +49,22 @@ export class CheckoutController {
       const merchantId = request.merchant?.merchantId;
       const result = await this.checkoutService.reserveAllocation(merchantId, dto);
       return ApiResponse.success(result, 'Allocation reserved successfully');
+    } catch (error) {
+      return ApiResponse.error(error.message, error);
+    }
+  }
+
+  @Post('initiate-disbursement')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Initiate loan disbursement after card authorization' })
+  @ApiResponseDecorator({ status: 201, description: 'Disbursement initiated successfully' })
+  @ApiResponseDecorator({ status: 400, description: 'Invalid request or reservation not found' })
+  @ApiResponseDecorator({ status: 401, description: 'Unauthorized - Invalid API key' })
+  async initiateDisbursement(@Req() request: any, @Body() dto: InitiateDisbursementDto) {
+    try {
+      const merchantId = request.merchant?.merchantId;
+      const result = await this.checkoutService.initiateDisbursement(merchantId, dto);
+      return ApiResponse.success(result, 'Disbursement initiated successfully');
     } catch (error) {
       return ApiResponse.error(error.message, error);
     }

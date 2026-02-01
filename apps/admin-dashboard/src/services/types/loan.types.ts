@@ -1,4 +1,4 @@
-export type LoanStatus = 'pending' | 'active' | 'completed' | 'defaulted' | 'cancelled';
+export type LoanStatus = 'pending' | 'active' | 'completed' | 'defaulted' | 'cancelled' | 'expired';
 
 export type RepaymentFrequency =
   | 'daily'

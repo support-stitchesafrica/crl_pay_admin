@@ -75,10 +75,4 @@ export class CreateMerchantDto {
   @IsOptional()
   @IsString()
   websiteUrl?: string;
-
-  @ApiProperty({ type: SettlementAccountDto, required: false })
-  @IsOptional()
-  @ValidateNested()
-  @Type(() => SettlementAccountDto)
-  settlementAccount?: SettlementAccountDto;
 }

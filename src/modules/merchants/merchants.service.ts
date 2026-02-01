@@ -59,11 +59,6 @@ export class MerchantsService {
         businessAddress,
         businessCategory: createMerchantDto.businessCategory,
         status: 'pending',
-        settlementAccount: {
-          bankName: createMerchantDto.settlementAccount?.bankName || '',
-          accountNumber: createMerchantDto.settlementAccount?.accountNumber || '',
-          accountName: createMerchantDto.settlementAccount?.accountName || '',
-        },
         // Initialize analytics fields
         totalRevenue: 0,
         totalTransactions: 0,
@@ -292,7 +287,13 @@ export class MerchantsService {
       // Send appropriate email based on status
       if (approveMerchantDto.status === 'approved') {
         this.notificationsService
-          .sendMerchantApprovalEmail(merchantData.email, merchantData.businessName, approveMerchantDto.notes)
+          .sendMerchantApprovalEmail(
+            merchantData.email,
+            merchantData.businessName,
+            updateData.apiKey,
+            updateData.apiSecret,
+            approveMerchantDto.notes
+          )
           .catch((err) => this.logger.error(`Failed to send approval email: ${err.message}`));
       } else if (approveMerchantDto.status === 'rejected') {
         this.notificationsService

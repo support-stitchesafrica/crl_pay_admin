@@ -3,7 +3,8 @@ export type LoanStatus =
   | 'active'       // Currently being repaid
   | 'completed'    // Fully paid off
   | 'defaulted'    // Missed payments, in collections
-  | 'cancelled';   // Cancelled before activation
+  | 'cancelled'    // Cancelled before activation
+  | 'expired';     // Expired without card authorization
 
 export type RepaymentFrequency =
   | 'daily'
@@ -67,8 +68,7 @@ export interface Loan {
   loanAccountNumber: string; // Human-readable 10-digit alphanumeric account number
   merchantId: string;
   customerId: string;
-  financingPlanId?: string; // Which financing plan was used for this loan
-  financierId?: string; // Which financier funded this loan
+  allocationId: string; // Which merchant allocation funded this loan
 
   // Loan Details
   principalAmount: number;
@@ -88,6 +88,11 @@ export interface Loan {
   orderId?: string; // Merchant's order reference
   productDescription?: string;
   metadata?: Record<string, any>;
+
+  // Settlement tracking
+  settled: boolean;
+  settlementId?: string;
+  settledAt?: Date;
 
   // Timestamps
   createdAt: Date;

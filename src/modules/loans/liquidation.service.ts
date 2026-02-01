@@ -504,7 +504,7 @@ export class LiquidationService {
           merchantId,
           reference,
           loanId,
-          financierId: (loan.metadata?.financierId as string) || '',
+          // financierId: (loan.metadata?.financierId as string) || '', // Deprecated field
           amount: calculation.totalDue,
           currency: 'NGN',
           provider: 'manual',

@@ -3,6 +3,7 @@ export interface SettlementAccount {
   accountNumber: string;
   accountName: string;
   bankCode?: string;
+  paystackRecipientCode?: string;
 }
 
 export interface Merchant {
@@ -18,12 +19,12 @@ export interface Merchant {
   status: 'pending' | 'approved' | 'rejected' | 'suspended';
   apiKey?: string;
   apiSecret?: string;
-  settlementAccount: SettlementAccount;
-  // Legacy fields (deprecated - use settlementAccount instead)
-  bankName?: string;
-  accountNumber?: string;
-  accountName?: string;
+  // Settlement account (deprecated - settlements are manual)
+  settlementAccount?: SettlementAccount;
   adminNotes?: string;
+
+  // Allocation reference
+  activeAllocationId?: string;
 
   // Analytics fields
   totalRevenue?: number;

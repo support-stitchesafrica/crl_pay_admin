@@ -16,15 +16,19 @@ export class ReserveAllocationDto {
   @IsString()
   @IsNotEmpty()
   customerId: string;
+
+  @ApiProperty({ description: 'Customer credit tier', example: 'gold', enum: ['bronze', 'silver', 'gold', 'platinum'] })
+  @IsString()
+  @IsNotEmpty()
+  creditTier: 'bronze' | 'silver' | 'gold' | 'platinum';
 }
 
 export class ReservationResponseDto {
   reservationId: string;
   merchantId: string;
+  customerId: string;
   reference: string;
-  mappingId: string;
-  planId: string;
-  financierId: string;
+  allocationId: string;
   amount: number;
   currency: string;
   status: string;

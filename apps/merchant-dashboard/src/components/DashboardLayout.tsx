@@ -6,7 +6,6 @@ import {
   Receipt,
   Users,
   CreditCard,
-  Wallet,
   BarChart3,
   Settings,
   LogOut,
@@ -23,7 +22,6 @@ interface DashboardLayoutProps {
 
 const menuItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
-  { icon: Wallet, label: 'Financing Plans', path: '/financing-plans' },
   { icon: Receipt, label: 'Transactions', path: '/transactions' },
   { icon: Users, label: 'Customers', path: '/customers' },
   { icon: Search, label: 'Customer Lookup', path: '/customer-lookup' },

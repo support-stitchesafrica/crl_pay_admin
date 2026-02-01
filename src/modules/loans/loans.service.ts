@@ -4,6 +4,9 @@ import { Loan, PaymentScheduleItem, CardAuthorization } from '../../entities/loa
 import { CreateLoanDto } from './dto/create-loan.dto';
 import { UpdateLoanDto, AuthorizeCardDto, RecordPaymentDto } from './dto/update-loan.dto';
 import { LoanCalculatorService } from './loan-calculator.service';
+import { AllocationsService } from '../allocations/allocations.service';
+import { CapitalService } from '../capital/capital.service';
+import { CreditConfigService } from '../credit/credit-config.service';
 import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
@@ -14,6 +17,9 @@ export class LoansService {
   constructor(
     @Inject('FIRESTORE') private firestore: Firestore,
     private loanCalculator: LoanCalculatorService,
+    private allocationsService: AllocationsService,
+    private capitalService: CapitalService,
+    private creditConfigService: CreditConfigService,
   ) {
     this.loansCollection = this.firestore.collection('crl_loans');
   }
@@ -23,67 +29,59 @@ export class LoansService {
    */
   async create(
     createLoanDto: CreateLoanDto,
-    merchantInterestRate: number,
-    merchantPenaltyRate: number,
+    merchantInterestRate?: number,
+    merchantPenaltyRate?: number,
   ): Promise<Loan> {
     try {
-      // Ensure merchantId is present
       if (!createLoanDto.merchantId) {
         throw new BadRequestException('Merchant ID is required');
       }
 
-      // Fetch active plan mapping for this merchant to get financingPlanId
-      let financingPlanId: string | undefined;
-      let financierId: string | undefined;
+      // Get merchant's active allocation
+      const allocation = await this.allocationsService.findByMerchant(createLoanDto.merchantId);
       
-      try {
-        const mappingsSnapshot = await this.firestore
-          .collection('crl_plan_merchant_mappings')
-          .where('merchantId', '==', createLoanDto.merchantId)
-          .where('status', '==', 'active')
-          .limit(1)
-          .get();
-
-        if (!mappingsSnapshot.empty) {
-          const mapping = mappingsSnapshot.docs[0].data();
-          financingPlanId = mapping.planId;
-          financierId = mapping.financierId;
-          this.logger.log(`Loan will be linked to financing plan: ${financingPlanId}`);
-        } else {
-          this.logger.warn(`No active plan mapping found for merchant: ${createLoanDto.merchantId}`);
-        }
-      } catch (error) {
-        this.logger.error(`Error fetching plan mapping: ${error.message}`);
-        // Continue without plan mapping - loan can still be created
+      if (!allocation) {
+        throw new NotFoundException('Merchant has no active allocation');
       }
 
-      // Validate tenor and frequency combination
-      const validation = this.loanCalculator.validateTenorFrequencyCombination(
-        createLoanDto.tenor,
-        createLoanDto.frequency,
+      // Reserve amount from allocation
+      await this.allocationsService.reserveAmount(allocation.allocationId, createLoanDto.principalAmount);
+
+      // Get credit configuration to determine interest rate based on tier
+      const creditConfig = await this.creditConfigService.getActiveConfig();
+      const interestRatePerPeriod = creditConfig.interestRates[createLoanDto.creditTier];
+
+      // Use allocation terms for loan configuration
+      const terms = allocation.terms;
+      const numberOfInstallments = terms.tenure;
+      
+      // Calculate interest based on credit tier
+      const totalInterest = Math.ceil(
+        (createLoanDto.principalAmount * interestRatePerPeriod * numberOfInstallments) / 100
       );
+      const totalAmount = createLoanDto.principalAmount + totalInterest;
+      const installmentAmount = Math.ceil(totalAmount / numberOfInstallments);
 
-      if (!validation.valid) {
-        throw new BadRequestException(validation.message);
-      }
+      const configuration = {
+        frequency: terms.tenurePeriod.slice(0, -1) as any,
+        tenor: { value: terms.tenure, period: terms.tenurePeriod.toUpperCase() as any },
+        numberOfInstallments,
+        interestRate: interestRatePerPeriod,
+        penaltyRate: terms.penalty.amount,
+        lateFee: terms.penalty,
+        installmentAmount,
+        totalInterest,
+        totalAmount,
+      };
 
-      // Generate loan configuration
-      const configuration = this.loanCalculator.calculateLoanConfiguration(
-        createLoanDto.principalAmount,
-        createLoanDto.frequency,
-        createLoanDto.tenor,
-        merchantInterestRate,
-        merchantPenaltyRate,
-      );
-
-      // Generate payment schedule (will start after card authorization)
+      // Generate payment schedule
       const paymentSchedule = this.loanCalculator.generatePaymentSchedule(configuration);
 
       const loanId = uuidv4();
       const loanAccountNumber = await this.generateLoanAccountNumber();
       const now = new Date();
 
-      // Convert to plain objects for Firestore (avoid class instances)
+      // Convert to plain objects for Firestore
       const plainConfiguration = JSON.parse(JSON.stringify(configuration));
       const plainPaymentSchedule = JSON.parse(JSON.stringify(paymentSchedule));
 
@@ -92,15 +90,15 @@ export class LoansService {
         loanAccountNumber,
         merchantId: createLoanDto.merchantId,
         customerId: createLoanDto.customerId,
-        financingPlanId,
-        financierId,
+        allocationId: allocation.allocationId,
         principalAmount: createLoanDto.principalAmount,
         configuration: plainConfiguration,
         paymentSchedule: plainPaymentSchedule,
-        status: 'pending', // Waiting for card authorization
+        status: 'pending',
         currentInstallment: 0,
         amountPaid: 0,
         amountRemaining: configuration.totalAmount,
+        settled: false,
         orderId: createLoanDto.orderId,
         productDescription: createLoanDto.productDescription,
         metadata: createLoanDto.metadata,
@@ -109,7 +107,30 @@ export class LoansService {
       };
 
       await this.loansCollection.doc(loanId).set(loan);
-      this.logger.log(`Loan created: ${loanId} for customer: ${createLoanDto.customerId}`);
+      
+      // Create payment schedule records in separate collection
+      const schedulePromises = paymentSchedule.map((scheduleItem, index) => {
+        const scheduleId = `${loanId}_${index + 1}`;
+        return this.firestore.collection('crl_repayment_schedules').doc(scheduleId).set({
+          scheduleId,
+          loanId,
+          ...scheduleItem,
+          createdAt: now,
+          updatedAt: now,
+        });
+      });
+      await Promise.all(schedulePromises);
+      
+      // Record loan creation in allocation
+      await this.allocationsService.recordLoanCreation(
+        allocation.allocationId,
+        createLoanDto.principalAmount
+      );
+      
+      // Record loan disbursement in capital pool
+      await this.capitalService.recordLoanDisbursement(createLoanDto.principalAmount);
+      
+      this.logger.log(`Loan created: ${loanId} with ${paymentSchedule.length} payment schedules from allocation: ${allocation.allocationId}`);
 
       return loan;
     } catch (error) {
@@ -159,7 +180,19 @@ export class LoansService {
     };
 
     await this.loansCollection.doc(loanId).update(updatedLoan);
-    this.logger.log(`Card authorized for loan: ${loanId}`);
+    
+    // Update payment schedule records in separate collection with actual dates
+    const now = new Date();
+    const scheduleUpdatePromises = updatedSchedule.map((scheduleItem, index) => {
+      const scheduleId = `${loanId}_${index + 1}`;
+      return this.firestore.collection('crl_repayment_schedules').doc(scheduleId).update({
+        ...scheduleItem,
+        updatedAt: now,
+      });
+    });
+    await Promise.all(scheduleUpdatePromises);
+    
+    this.logger.log(`Card authorized for loan: ${loanId} and payment schedules updated`);
 
     // Also save card info to customer record for future use
     try {
@@ -524,15 +557,17 @@ export class LoansService {
     totalOutstanding: number;
   }> {
     const loans = await this.findAll({ merchantId });
+    const activeLoans = loans.filter((l) => l.status === 'active');
 
     return {
       totalLoans: loans.length,
-      activeLoans: loans.filter((l) => l.status === 'active').length,
+      activeLoans: activeLoans.length,
       completedLoans: loans.filter((l) => l.status === 'completed').length,
       defaultedLoans: loans.filter((l) => l.status === 'defaulted').length,
-      totalDisbursed: loans.reduce((sum, l) => sum + l.principalAmount, 0),
+      // Only count active loans for disbursed and outstanding
+      totalDisbursed: activeLoans.reduce((sum, l) => sum + l.principalAmount, 0),
       totalCollected: loans.reduce((sum, l) => sum + l.amountPaid, 0),
-      totalOutstanding: loans.reduce((sum, l) => sum + l.amountRemaining, 0),
+      totalOutstanding: activeLoans.reduce((sum, l) => sum + l.amountRemaining, 0),
     };
   }
 

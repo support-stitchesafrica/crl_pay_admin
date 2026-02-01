@@ -10,14 +10,15 @@ import Merchants from './pages/Merchants';
 import Customers from './pages/Customers';
 import Loans from './pages/Loans';
 import LoanDetail from './pages/LoanDetail';
-import Financiers from './pages/Financiers';
-import FinancingPlans from './pages/FinancingPlans';
-import PlanMerchantMapping from './pages/PlanMerchantMapping';
+import CapitalPool from './pages/CapitalPool';
+import Allocations from './pages/Allocations';
+import Settlements from './pages/Settlements';
 import Settings from './pages/Settings';
 import Analytics from './pages/Analytics';
 import Integrations from './pages/Integrations';
 import AuditLogs from './pages/AuditLogs';
 import Transactions from './pages/Transactions';
+import CreditConfig from './pages/CreditConfig';
 
 const queryClient = new QueryClient();
 
@@ -103,26 +104,26 @@ function App() {
               }
             />
             <Route
-              path="/financiers"
+              path="/capital-pool"
               element={
                 <ProtectedRoute>
-                  <Financiers />
+                  <CapitalPool />
                 </ProtectedRoute>
               }
             />
             <Route
-              path="/financing-plans"
+              path="/allocations"
               element={
                 <ProtectedRoute>
-                  <FinancingPlans />
+                  <Allocations />
                 </ProtectedRoute>
               }
             />
             <Route
-              path="/plan-mappings"
+              path="/settlements"
               element={
                 <ProtectedRoute>
-                  <PlanMerchantMapping />
+                  <Settlements />
                 </ProtectedRoute>
               }
             />
@@ -131,6 +132,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <AuditLogs />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/credit-config"
+              element={
+                <ProtectedRoute>
+                  <CreditConfig />
                 </ProtectedRoute>
               }
             />

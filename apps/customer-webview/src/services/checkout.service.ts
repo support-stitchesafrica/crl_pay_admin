@@ -2,21 +2,14 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3006/api/v1
 
 export interface EligibilityResult {
   eligible: boolean;
-  eligibleMappings?: Array<{
-    mappingId: string;
-    planId: string;
-    financierId: string;
-    remainingAllocation: number;
-    expirationDate: string;
-  }>;
+  allocationId?: string;
   reason?: string;
 }
 
 export interface ReservationResult {
   reservationId: string;
   expiresAt: string;
-  planId: string;
-  mappingId: string;
+  allocationId: string;
   amount: number;
   reserved: boolean;
 }
@@ -72,6 +65,7 @@ export const checkoutService = {
     reference: string;
     amount: number;
     customerId: string;
+    creditTier: 'bronze' | 'silver' | 'gold' | 'platinum';
     apiKey: string;
   }): Promise<ReservationResult> {
     const response = await fetch(`${API_URL}/checkout/reserve`, {
@@ -84,6 +78,7 @@ export const checkoutService = {
         reference: params.reference,
         amount: params.amount,
         customerId: params.customerId,
+        creditTier: params.creditTier,
       }),
     });
 
@@ -105,7 +100,7 @@ export const checkoutService = {
     customerId: string;
     apiKey: string;
   }): Promise<DisbursementResult> {
-    const response = await fetch(`${API_URL}/disbursements/initiate`, {
+    const response = await fetch(`${API_URL}/checkout/initiate-disbursement`, {
       method: 'POST',
       headers: {
         'X-API-Key': params.apiKey,

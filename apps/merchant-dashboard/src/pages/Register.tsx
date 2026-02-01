@@ -85,9 +85,6 @@ export default function Register() {
     country: 'Nigeria',
     businessCategory: '',
     cacNumber: '',
-    bankName: '',
-    accountNumber: '',
-    accountName: '',
   });
 
   // Countdown timer for auto-redirect
@@ -145,14 +142,6 @@ export default function Register() {
       // Add optional fields if provided
       if (formData.cacNumber) {
         registrationData.cacNumber = formData.cacNumber;
-      }
-
-      if (formData.bankName || formData.accountNumber || formData.accountName) {
-        registrationData.settlementAccount = {
-          bankName: formData.bankName,
-          accountNumber: formData.accountNumber,
-          accountName: formData.accountName,
-        };
       }
 
       const response = await authService.register(registrationData);
@@ -322,9 +311,9 @@ export default function Register() {
               </div>
             </div>
 
-            {/* Settlement Account */}
+            {/* CAC Number */}
             <div className="space-y-4">
-              <h3 className="text-sm font-semibold text-gray-900 border-b border-gray-200 pb-2">Settlement Account (Optional)</h3>
+              <h3 className="text-sm font-semibold text-gray-900 border-b border-gray-200 pb-2">Additional Information (Optional)</h3>
 
               <Input
                 label="CAC Number"
@@ -332,34 +321,6 @@ export default function Register() {
                 value={formData.cacNumber}
                 onChange={handleChange}
                 placeholder="RC1234567"
-                disabled={loading}
-              />
-
-              <Input
-                label="Bank Name"
-                name="bankName"
-                value={formData.bankName}
-                onChange={handleChange}
-                placeholder="e.g., Access Bank"
-                disabled={loading}
-              />
-
-              <Input
-                label="Account Number"
-                name="accountNumber"
-                value={formData.accountNumber}
-                onChange={handleChange}
-                placeholder="0123456789"
-                disabled={loading}
-                maxLength={10}
-              />
-
-              <Input
-                label="Account Name"
-                name="accountName"
-                value={formData.accountName}
-                onChange={handleChange}
-                placeholder="Business Account Name"
                 disabled={loading}
               />
             </div>

@@ -179,11 +179,15 @@ export class EmailService {
   async sendMerchantApprovalEmail(
     merchantEmail: string,
     merchantName: string,
+    apiKey: string,
+    apiSecret: string,
     notes?: string,
   ): Promise<void> {
     try {
       const html = this.renderTemplate('merchant-approval', {
         merchantName,
+        apiKey,
+        apiSecret,
         notes,
       });
 
@@ -402,121 +406,6 @@ export class EmailService {
       this.logger.log(`Forgot password OTP sent to: ${email}`);
     } catch (error) {
       this.logger.error(`Failed to send forgot password OTP: ${error.message}`);
-      throw error;
-    }
-  }
-
-  /**
-   * Send financier registration email (to financier and admin)
-   */
-  async sendFinancierRegistrationEmail(financierEmail: string, companyName: string): Promise<void> {
-    try {
-      // Email to financier
-      const financierHtml = this.renderTemplate('financier-registration', { companyName });
-      await this.sendEmail(financierEmail, 'Welcome to CRL Pay - Registration Successful', financierHtml);
-
-      // Email to admin
-      const adminHtml = this.renderTemplate('admin-financier-registration', {
-        companyName,
-        financierEmail,
-        registrationDate: new Date().toLocaleString(),
-      });
-      await this.sendEmail(this.adminEmail, 'New Financier Registration - Action Required', adminHtml);
-
-      this.logger.log(`Registration emails sent for financier: ${financierEmail}`);
-    } catch (error) {
-      this.logger.error(`Failed to send financier registration email: ${error.message}`);
-      throw error;
-    }
-  }
-
-  /**
-   * Send financier approval email
-   */
-  async sendFinancierApprovalEmail(
-    financierEmail: string,
-    companyName: string,
-    notes?: string,
-  ): Promise<void> {
-    try {
-      const html = this.renderTemplate('financier-approval', {
-        companyName,
-        notes,
-      });
-
-      await this.sendEmail(
-        financierEmail,
-        'Your CRL Pay Financier Account Has Been Approved!',
-        html,
-      );
-
-      this.logger.log(`Approval email sent to financier: ${financierEmail}`);
-    } catch (error) {
-      this.logger.error(`Failed to send financier approval email: ${error.message}`);
-      throw error;
-    }
-  }
-
-  /**
-   * Send financier rejection email
-   */
-  async sendFinancierRejectionEmail(
-    financierEmail: string,
-    companyName: string,
-    reason?: string,
-  ): Promise<void> {
-    try {
-      const html = this.renderTemplate('financier-rejection', {
-        companyName,
-        reason,
-      });
-
-      await this.sendEmail(financierEmail, 'CRL Pay Financier Application Update', html);
-
-      this.logger.log(`Rejection email sent to financier: ${financierEmail}`);
-    } catch (error) {
-      this.logger.error(`Failed to send financier rejection email: ${error.message}`);
-      throw error;
-    }
-  }
-
-  /**
-   * Send new financing plan notification to admin
-   */
-  async sendPlanCreationNotificationToAdmin(data: {
-    financierName: string;
-    financierEmail: string;
-    planName: string;
-    planDescription?: string;
-    interestRate: number;
-    tenorValue: number;
-    tenorPeriod: string;
-    minimumAmount: number;
-    maximumAmount: number;
-    gracePeriodValue: number;
-    gracePeriodPeriod: string;
-  }): Promise<void> {
-    try {
-      const html = this.renderTemplate('admin-plan-notification', {
-        financierName: data.financierName,
-        financierEmail: data.financierEmail,
-        creationDate: new Date().toLocaleString(),
-        planName: data.planName,
-        planDescription: data.planDescription,
-        interestRate: data.interestRate,
-        tenorValue: data.tenorValue,
-        tenorPeriod: data.tenorPeriod.toLowerCase(),
-        minimumAmount: data.minimumAmount.toLocaleString(),
-        maximumAmount: data.maximumAmount.toLocaleString(),
-        gracePeriodValue: data.gracePeriodValue,
-        gracePeriodPeriod: data.gracePeriodPeriod.toLowerCase(),
-      });
-
-      await this.sendEmail(this.adminEmail, 'New Financing Plan Created - Action Required', html);
-
-      this.logger.log(`Plan creation notification sent to admin for plan: ${data.planName}`);
-    } catch (error) {
-      this.logger.error(`Failed to send plan creation notification: ${error.message}`);
       throw error;
     }
   }

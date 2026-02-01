@@ -41,6 +41,10 @@ export class CreateLoanDto {
   @Min(1)
   principalAmount: number;
 
+  @ApiProperty({ example: 'gold', description: 'Customer credit tier', enum: ['bronze', 'silver', 'gold', 'platinum'] })
+  @IsEnum(['bronze', 'silver', 'gold', 'platinum'])
+  creditTier: 'bronze' | 'silver' | 'gold' | 'platinum';
+
   @ApiProperty({
     example: 'monthly',
     description: 'Repayment frequency',

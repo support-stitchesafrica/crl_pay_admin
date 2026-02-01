@@ -453,12 +453,12 @@ export default function Loans() {
                             <div
                               className="bg-blue-600 h-2 rounded-full"
                               style={{
-                                width: `${loan.status === 'completed' ? 100 : (loan.amountPaid / (loan.amountPaid + loan.amountRemaining)) * 100}%`,
+                                width: `${loan.status === 'completed' ? 100 : loan.status === 'expired' ? 0 : (loan.amountPaid / (loan.amountPaid + loan.amountRemaining)) * 100}%`,
                               }}
                             ></div>
                           </div>
                           <span className="text-xs text-gray-600">
-                            {loan.status === 'completed' ? 100 : Math.round((loan.amountPaid / (loan.amountPaid + loan.amountRemaining)) * 100)}%
+                            {loan.status === 'completed' ? 100 : loan.status === 'expired' ? 0 : Math.round((loan.amountPaid / (loan.amountPaid + loan.amountRemaining)) * 100)}%
                           </span>
                         </div>
                         <div className="text-xs text-gray-500 mt-1">
@@ -574,13 +574,13 @@ export default function Loans() {
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-xs text-gray-600">Payment Progress</span>
                       <span className="text-xs font-medium text-gray-900">
-                        {viewModal.loan.status === 'completed' ? 100 : Math.round((viewModal.loan.amountPaid / (viewModal.loan.amountPaid + viewModal.loan.amountRemaining)) * 100)}%
+                        {viewModal.loan.status === 'completed' ? 100 : viewModal.loan.status === 'expired' ? 0 : Math.round((viewModal.loan.amountPaid / (viewModal.loan.amountPaid + viewModal.loan.amountRemaining)) * 100)}%
                       </span>
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-2">
                       <div
                         className="bg-blue-600 h-2 rounded-full transition-all"
-                        style={{ width: `${viewModal.loan.status === 'completed' ? 100 : (viewModal.loan.amountPaid / (viewModal.loan.amountPaid + viewModal.loan.amountRemaining)) * 100}%` }}
+                        style={{ width: `${viewModal.loan.status === 'completed' ? 100 : viewModal.loan.status === 'expired' ? 0 : (viewModal.loan.amountPaid / (viewModal.loan.amountPaid + viewModal.loan.amountRemaining)) * 100}%` }}
                       ></div>
                     </div>
                   </div>

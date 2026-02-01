@@ -17,6 +17,9 @@ import { UpdateMerchantDto } from './dto/update-merchant.dto';
 import { ApproveMerchantDto } from './dto/approve-merchant.dto';
 import { ApiResponse } from '../../common/helpers/response.helper';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { ApiKeyGuard } from '../auth/guards/api-key.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
 
 @ApiTags('Merchants')
 @Controller('merchants')
@@ -63,6 +66,26 @@ export class MerchantsController {
     }
   }
 
+  @Get('by-api-key')
+  @UseGuards(ApiKeyGuard)
+  @ApiOperation({ summary: 'Get merchant by API key' })
+  @ApiResponseDecorator({ status: 200, description: 'Merchant retrieved successfully' })
+  @ApiResponseDecorator({ status: 401, description: 'Unauthorized - Invalid API key' })
+  async getByApiKey(@Request() req: any) {
+    try {
+      const merchant = req.merchant;
+
+      if (!merchant) {
+        throw new Error('Merchant not found');
+      }
+
+      const { passwordHash, apiSecret, ...safeProfile } = merchant;
+      return ApiResponse.success(safeProfile, 'Merchant retrieved successfully');
+    } catch (error) {
+      return ApiResponse.error(error.message, error);
+    }
+  }
+
   @Get('me')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
@@ -85,6 +108,38 @@ export class MerchantsController {
       }
 
       return ApiResponse.success(merchant, 'Profile retrieved successfully');
+    } catch (error) {
+      return ApiResponse.error(error.message, error);
+    }
+  }
+
+  @Get('me/credentials')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get API credentials (public and secret keys)' })
+  @ApiResponseDecorator({ status: 200, description: 'Credentials retrieved successfully' })
+  @ApiResponseDecorator({ status: 401, description: 'Unauthorized' })
+  async getCredentials(@Request() req: any) {
+    try {
+      const merchantId = req.user?.sub || req.user?.merchantId;
+
+      if (!merchantId) {
+        throw new Error('Merchant ID not found in token');
+      }
+
+      const merchant = await this.merchantsService.findOne(merchantId);
+
+      if (!merchant) {
+        return ApiResponse.error('Merchant not found');
+      }
+
+      return ApiResponse.success(
+        {
+          apiKey: merchant.apiKey,
+          apiSecret: merchant.apiSecret,
+        },
+        'API credentials retrieved successfully',
+      );
     } catch (error) {
       return ApiResponse.error(error.message, error);
     }

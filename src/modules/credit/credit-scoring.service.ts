@@ -2,6 +2,8 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Customer } from '../../entities/customer.entity';
 import { YouverifyService } from '../verification/youverify.service';
 import { DuplicateDetectionService } from './duplicate-detection.service';
+import { CreditConfigService } from './credit-config.service';
+import { CreditConfiguration } from '../../entities/credit-config.entity';
 
 interface ScoringComponents {
   identityScore: number;
@@ -35,6 +37,7 @@ export class CreditScoringService {
   constructor(
     private readonly youverifyService: YouverifyService,
     private readonly duplicateDetectionService: DuplicateDetectionService,
+    private readonly creditConfigService: CreditConfigService,
   ) {}
 
   /**
@@ -53,8 +56,13 @@ export class CreditScoringService {
     requestedTenure?: number,
     deviceFingerprint?: string,
     ipAddress?: string,
+    financierId?: string,
   ): Promise<ScoringResult> {
     this.logger.log(`Calculating credit score for customer: ${customer.customerId}`);
+
+    // Get active configuration
+    const config = await this.creditConfigService.getActiveConfig(financierId);
+    this.logger.log(`Using config: ${config.name} (v${config.version})`);
 
     const decisionReasons: string[] = [];
     const riskFlags: string[] = [];
@@ -102,15 +110,15 @@ export class CreditScoringService {
     const totalScore = identityScore + behavioralScore + financialScore + merchantScore + historyScore;
 
     this.logger.log(`Credit Score Breakdown:`);
-    this.logger.log(`Identity: ${identityScore}/200`);
-    this.logger.log(`Behavioral: ${behavioralScore}/200`);
-    this.logger.log(`Financial: ${financialScore}/300`);
-    this.logger.log(`Merchant: ${merchantScore}/100`);
-    this.logger.log(`History: ${historyScore}/200`);
+    this.logger.log(`Identity: ${identityScore}/${config.scoringWeights.identity}`);
+    this.logger.log(`Behavioral: ${behavioralScore}/${config.scoringWeights.behavioral}`);
+    this.logger.log(`Financial: ${financialScore}/${config.scoringWeights.financial}`);
+    this.logger.log(`Merchant: ${merchantScore}/${config.scoringWeights.merchant}`);
+    this.logger.log(`History: ${historyScore}/${config.scoringWeights.history}`);
     this.logger.log(`TOTAL: ${totalScore}/1000`);
 
     // Determine credit tier
-    const creditTier = this.determineCreditTier(totalScore);
+    const creditTier = this.determineCreditTier(totalScore, config);
 
     // Make lending decision
     const decision = this.makeLendingDecision(
@@ -119,6 +127,7 @@ export class CreditScoringService {
       requestedAmount,
       riskFlags,
       decisionReasons,
+      config,
     );
 
     // Determine approved terms
@@ -128,6 +137,7 @@ export class CreditScoringService {
       requestedAmount,
       requestedTenure || 4,
       totalScore,
+      config,
     );
 
     this.logger.log(`Final Decision: ${decision.toUpperCase()}`);
@@ -432,10 +442,10 @@ export class CreditScoringService {
   /**
    * Determine Credit Tier based on score
    */
-  private determineCreditTier(totalScore: number): 'bronze' | 'silver' | 'gold' | 'platinum' {
-    if (totalScore >= 800) return 'platinum';
-    if (totalScore >= 650) return 'gold';
-    if (totalScore >= 500) return 'silver';
+  private determineCreditTier(totalScore: number, config: CreditConfiguration): 'bronze' | 'silver' | 'gold' | 'platinum' {
+    if (totalScore >= config.creditTiers.platinum.min) return 'platinum';
+    if (totalScore >= config.creditTiers.gold.min) return 'gold';
+    if (totalScore >= config.creditTiers.silver.min) return 'silver';
     return 'bronze';
   }
 
@@ -448,35 +458,52 @@ export class CreditScoringService {
     requestedAmount: number,
     riskFlags: string[],
     decisionReasons: string[],
+    config: CreditConfiguration,
   ): 'instant_approval' | 'conditional_approval' | 'manual_review' | 'declined' {
+    const rules = config.autoDeclineRules;
+
     // Auto-decline conditions
-    if (customer.status === 'blacklisted') {
+    if (rules.blacklistedCustomer && customer.status === 'blacklisted') {
       decisionReasons.push('Customer is blacklisted');
       return 'declined';
     }
 
-    if (customer.defaultedLoans > 2) {
-      decisionReasons.push('Too many defaulted loans');
+    if (rules.suspendedCustomer && customer.status === 'suspended') {
+      decisionReasons.push('Customer is suspended');
       return 'declined';
     }
 
-    if (customer.activeLoans >= 3) {
-      decisionReasons.push('Too many active loans');
+    if (customer.defaultedLoans > rules.maxDefaultedLoans) {
+      decisionReasons.push(`Too many defaulted loans (${customer.defaultedLoans} > ${rules.maxDefaultedLoans})`);
       return 'declined';
     }
 
-    // Score-based decision
-    if (totalScore >= 700 && riskFlags.length === 0) {
+    if (customer.activeLoans >= rules.maxActiveLoans) {
+      decisionReasons.push(`Too many active loans (${customer.activeLoans} >= ${rules.maxActiveLoans})`);
+      return 'declined';
+    }
+
+    if (totalScore < rules.minCreditScore) {
+      decisionReasons.push(`Credit score below minimum (${totalScore} < ${rules.minCreditScore})`);
+      return 'declined';
+    }
+
+    // Score-based decision using config thresholds
+    const approvalThresholds = config.approvalThresholds;
+
+    if (totalScore >= approvalThresholds.instantApproval.minScore && riskFlags.length <= approvalThresholds.instantApproval.maxRiskFlags) {
       decisionReasons.push('High credit score with no risk flags');
       return 'instant_approval';
     }
 
-    if (totalScore >= 500 && riskFlags.length <= 2) {
+    if (totalScore >= approvalThresholds.conditionalApproval.minScore && 
+        totalScore <= approvalThresholds.conditionalApproval.maxScore && 
+        riskFlags.length <= approvalThresholds.conditionalApproval.maxRiskFlags) {
       decisionReasons.push('Moderate credit score - conditional approval');
       return 'conditional_approval';
     }
 
-    if (totalScore >= 400 && totalScore < 500) {
+    if (totalScore >= approvalThresholds.manualReview.minScore && totalScore <= approvalThresholds.manualReview.maxScore) {
       decisionReasons.push('Below threshold - requires manual review');
       return 'manual_review';
     }
@@ -494,20 +521,14 @@ export class CreditScoringService {
     requestedAmount: number,
     requestedTenure: number,
     totalScore: number,
+    config: CreditConfiguration,
   ): { approvedAmount: number; approvedTenure: number; interestRate: number } {
     if (decision === 'declined') {
       return { approvedAmount: 0, approvedTenure: 0, interestRate: 0 };
     }
 
-    // Interest rates by tier (monthly %)
-    const interestRates = {
-      bronze: 2.5,
-      silver: 2.0,
-      gold: 1.8,
-      platinum: 1.5,
-    };
-
-    const interestRate = interestRates[creditTier as keyof typeof interestRates];
+    // Get interest rate from config
+    const interestRate = config.interestRates[creditTier as keyof typeof config.interestRates];
 
     // For instant approval, approve full amount
     if (decision === 'instant_approval') {

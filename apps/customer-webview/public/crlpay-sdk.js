@@ -120,6 +120,9 @@
      * @private
      */
     _buildCheckoutUrl() {
+      // Extract merchantId from publicKey (format: pk_xxxxx)
+      // In production, this would be fetched from the backend
+      // For now, we'll pass the apiKey and let the checkout page handle it
       const params = new URLSearchParams({
         amount: this.options.amount,
         email: this.options.email,

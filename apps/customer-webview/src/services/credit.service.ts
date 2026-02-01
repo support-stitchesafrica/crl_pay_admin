@@ -6,6 +6,7 @@ export interface CreditAssessmentResult {
   decision: 'instant_approval' | 'conditional_approval' | 'manual_review' | 'rejected';
   totalScore: number;
   approvedAmount: number;
+  creditTier: 'bronze' | 'silver' | 'gold' | 'platinum';
   reason?: string;
 }
 

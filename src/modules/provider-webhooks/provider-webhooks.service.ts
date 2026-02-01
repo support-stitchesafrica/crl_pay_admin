@@ -2,7 +2,6 @@ import { Injectable, BadRequestException, Logger, Inject } from '@nestjs/common'
 import { Firestore } from '@google-cloud/firestore';
 import { ConfigService } from '@nestjs/config';
 import { PaystackService } from '../payments/paystack.service';
-import { DisbursementsService } from '../disbursements/disbursements.service';
 import { LoansService } from '../loans/loans.service';
 import { WebhookDeliveryService } from '../webhooks/webhook-delivery.service';
 import { RepaymentScheduleService } from '../repayments/repayment-schedule.service';
@@ -16,7 +15,6 @@ export class ProviderWebhooksService {
   constructor(
     @Inject('FIRESTORE') private firestore: Firestore,
     private configService: ConfigService,
-    private disbursementsService: DisbursementsService,
     private loansService: LoansService,
     private webhookDeliveryService: WebhookDeliveryService,
     private repaymentScheduleService: RepaymentScheduleService,
@@ -97,10 +95,7 @@ export class ProviderWebhooksService {
         return;
       }
 
-      await this.disbursementsService.finalizeDisbursementSuccess(
-        disbursement.disbursementId,
-        transferData,
-      );
+      this.logger.warn('Legacy disbursement webhook received - ignoring. Use SettlementsService instead.');
 
       const reservationDoc = await this.firestore
         .collection('crl_reservations')
@@ -150,6 +145,7 @@ export class ProviderWebhooksService {
           merchantId: disbursement.merchantId,
           customerId,
           principalAmount: disbursement.amount,
+          creditTier: 'silver', // Default tier for provider webhooks - should be passed from provider
           frequency: plan?.repaymentFrequency || 'monthly',
           tenor: plan?.tenor || { value: 6, period: 'MONTHS' },
           orderId: disbursement.reference,
@@ -175,9 +171,6 @@ export class ProviderWebhooksService {
         idempotencyKey: `LOAN:${disbursement.merchantId}:${disbursement.reference}`,
         merchantId: disbursement.merchantId,
         reference: disbursement.reference,
-        mappingId: disbursement.mappingId,
-        planId: disbursement.planId,
-        financierId: disbursement.financierId,
         reservationId: disbursement.reservationId,
         disbursementId: disbursement.disbursementId,
         loanId: loan.loanId,
@@ -251,11 +244,7 @@ export class ProviderWebhooksService {
 
       const failureReason = transferData.status || 'Transfer failed';
 
-      await this.disbursementsService.finalizeDisbursementFailure(
-        disbursement.disbursementId,
-        failureReason,
-        transferData,
-      );
+      this.logger.warn('Legacy disbursement failure webhook received - ignoring. Use SettlementsService instead.');
 
       await this.webhookDeliveryService.publishEvent(
         disbursement.merchantId,
